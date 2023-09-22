@@ -149,10 +149,10 @@ class DetectionValidator(BaseValidator):
     def print_results(self):
         """Prints training/validation set metrics per class."""
         pf = '%22s' + '%11i' * 2 + '%11.4g' * len(self.metrics.keys)  # print format
-        # LOGGER.info(pf % ('all', self.seen, self.nt_per_class.sum(), *self.metrics.mean_results()))
-        LOGGER.info(pf % ('all', self.seen, self.nt_per_class.sum(), self.metrics.mean_results()[0] * 100,
-                          self.metrics.mean_results()[1] * 100, self.metrics.mean_results()[1] * 100,
-                          self.metrics.mean_results()[3] * 100))
+        LOGGER.info(pf % ('all', self.seen, self.nt_per_class.sum(), *self.metrics.mean_results()))
+        # LOGGER.info(pf % ('all', self.seen, self.nt_per_class.sum(), self.metrics.mean_results()[0] * 100,
+        #                   self.metrics.mean_results()[1] * 100, self.metrics.mean_results()[1] * 100,
+        #                   self.metrics.mean_results()[3] * 100))
 
         if self.nt_per_class.sum() == 0:
             LOGGER.warning(
@@ -161,10 +161,10 @@ class DetectionValidator(BaseValidator):
         # Print results per class
         if self.args.verbose and not self.training and self.nc > 1 and len(self.stats):
             for i, c in enumerate(self.metrics.ap_class_index):
-                # LOGGER.info(pf % (self.names[c], self.seen, self.nt_per_class[c], *self.metrics.class_result(i)))
-                LOGGER.info(pf % (self.names[c], self.seen, self.nt_per_class[c], self.metrics.class_result(i)[0] * 100,
-                                  self.metrics.class_result(i)[1] * 100, self.metrics.class_result(i)[2] * 100,
-                                  self.metrics.class_result(i)[3] * 100))
+                LOGGER.info(pf % (self.names[c], self.seen, self.nt_per_class[c], *self.metrics.class_result(i)))
+                # LOGGER.info(pf % (self.names[c], self.seen, self.nt_per_class[c], self.metrics.class_result(i)[0] * 100,
+                #                   self.metrics.class_result(i)[1] * 100, self.metrics.class_result(i)[2] * 100,
+                #                   self.metrics.class_result(i)[3] * 100))
 
         if self.args.plots:
             for normalize in True, False:
