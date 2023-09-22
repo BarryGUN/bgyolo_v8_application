@@ -2,7 +2,7 @@
 # Default training settings and hyperparameters for medium-augmentation COCO training
 
 task: detect  # (str) YOLO task, i.e. detect, segment, classify, pose
-mode: train  # (str) YOLO mode, i.e. train, val, predict, export, track, benchmark
+mode: detect  # (str) YOLO mode, i.e. train, val, predict, export, track, benchmark
 
 # Train settings -------------------------------------------------------------------------------------------------------
 model:  yolov8m.yaml # (str, optional) path to model file, i.e. yolov8n.pt, yolov8n.yaml
@@ -16,7 +16,7 @@ save_period: -1 # (int) Save checkpoint every x epochs (disabled if < 1)
 cache: False  # (bool) True/ram, disk or False. Use cache for data loading
 device:  0 # (int | str | list, optional) device to run on, i.e. cuda device=0 or device=0,1,2,3 or device=cpu
 workers: 8  # (int) number of worker threads for data loading (per RANK if DDP)
-project:  runs/detect/train # (str, optional) project name
+project:  runs/detect/detect # (str, optional) project name
 name:  yolov8m # (str, optional) experiment name, results saved to 'project/name' directory
 exist_ok: False  # (bool) whether to overwrite existing experiment
 pretrained: False  # (bool | str) whether to use a pretrained model (bool) or a model to load weights from (str)
@@ -52,8 +52,8 @@ dnn: False  # (bool) use OpenCV DNN for ONNX inference
 plots: True  # (bool) save plots during train/val
 
 # Prediction settings --------------------------------------------------------------------------------------------------
-source:  # (str, optional) source directory for images or videos
-show: False  # (bool) show results if possible
+source:  images # (str, optional) source directory for images or videos
+show: True  # (bool) show results if possible
 save_txt: False  # (bool) save results as .txt file
 save_conf: False  # (bool) save results with confidence scores
 save_crop: False  # (bool) save cropped images with results
