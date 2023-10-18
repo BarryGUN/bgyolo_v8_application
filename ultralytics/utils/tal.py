@@ -5,6 +5,7 @@ import torch.nn as nn
 
 from .checks import check_version
 from .metrics import bbox_iou
+import torch.nn.functional as F
 
 TORCH_1_10 = check_version(torch.__version__, '1.10.0')
 
@@ -179,24 +180,51 @@ class TaskAlignedAssigner(nn.Module):
             (Tensor): A tensor of shape (b, max_num_obj, h*w) containing the selected top-k candidates.
         """
 
+        """
+        new 
+        """
+
+        # # (b, max_num_obj, topk)
+        # topk_metrics, topk_idxs = torch.topk(metrics, self.topk, dim=-1, largest=largest)
+        # if topk_mask is None:
+        #     topk_mask = (topk_metrics.max(-1, keepdim=True)[0] > self.eps).expand_as(topk_idxs)
+        # # (b, max_num_obj, topk)
+        # topk_idxs.masked_fill_(~topk_mask, 0)
+        #
+        # # (b, max_num_obj, topk, h*w) -> (b, max_num_obj, h*w)
+        # count_tensor = torch.zeros(metrics.shape, dtype=torch.int8, device=topk_idxs.device)
+        # ones = torch.ones_like(topk_idxs[:, :, :1], dtype=torch.int8, device=topk_idxs.device)
+        # for k in range(self.topk):
+        #     # Expand topk_idxs for each value of k and add 1 at the specified positions
+        #     count_tensor.scatter_add_(-1, topk_idxs[:, :, k:k + 1], ones)
+        # # count_tensor.scatter_add_(-1, topk_idxs, torch.ones_like(topk_idxs, dtype=torch.int8, device=topk_idxs.device))
+        # # filter invalid bboxes
+        # count_tensor.masked_fill_(count_tensor > 1, 0)
+
+        # return count_tensor.to(metrics.dtype)
+
+
+        """
+        old 
+        """
+        num_anchors = metrics.shape[-1]  # h*w
         # (b, max_num_obj, topk)
         topk_metrics, topk_idxs = torch.topk(metrics, self.topk, dim=-1, largest=largest)
         if topk_mask is None:
-            topk_mask = (topk_metrics.max(-1, keepdim=True)[0] > self.eps).expand_as(topk_idxs)
+            topk_mask = (topk_metrics.max(-1, keepdim=True) > self.eps).tile([1, 1, self.topk])
+
         # (b, max_num_obj, topk)
-        topk_idxs.masked_fill_(~topk_mask, 0)
+        topk_idxs = torch.where(topk_mask, topk_idxs, 0)
 
         # (b, max_num_obj, topk, h*w) -> (b, max_num_obj, h*w)
-        count_tensor = torch.zeros(metrics.shape, dtype=torch.int8, device=topk_idxs.device)
-        ones = torch.ones_like(topk_idxs[:, :, :1], dtype=torch.int8, device=topk_idxs.device)
-        for k in range(self.topk):
-            # Expand topk_idxs for each value of k and add 1 at the specified positions
-            count_tensor.scatter_add_(-1, topk_idxs[:, :, k:k + 1], ones)
-        # count_tensor.scatter_add_(-1, topk_idxs, torch.ones_like(topk_idxs, dtype=torch.int8, device=topk_idxs.device))
+        is_in_topk = F.one_hot(topk_idxs, num_anchors).sum(-2)
         # filter invalid bboxes
-        count_tensor.masked_fill_(count_tensor > 1, 0)
+        # assigned topk should be unique, this is for dealing with empty labels
+        # since empty labels will generate index `0` through `F.one_hot`
+        # NOTE: but what if the topk_idxs include `0`?
+        is_in_topk = torch.where(is_in_topk > 1, 0, is_in_topk)
+        return is_in_topk.to(metrics.dtype)
 
-        return count_tensor.to(metrics.dtype)
 
     def get_targets(self, gt_labels, gt_bboxes, target_gt_idx, fg_mask):
         """
