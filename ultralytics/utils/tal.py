@@ -206,26 +206,7 @@ class TaskAlignedAssigner(nn.Module):
         return count_tensor.to(metrics.dtype)
 
 
-        """
-        old 
-        """
-        # num_anchors = metrics.shape[-1]  # h*w
-        # # (b, max_num_obj, topk)
-        # topk_metrics, topk_idxs = torch.topk(metrics, self.topk, dim=-1, largest=largest)
-        # if topk_mask is None:
-        #     topk_mask = (topk_metrics.max(-1, keepdim=True) > self.eps).tile([1, 1, self.topk])
-        #
-        # # (b, max_num_obj, topk)
-        # topk_idxs = torch.where(topk_mask, topk_idxs, 0)
-        #
-        # # (b, max_num_obj, topk, h*w) -> (b, max_num_obj, h*w)
-        # is_in_topk = F.one_hot(topk_idxs, num_anchors).sum(-2)
-        # # filter invalid bboxes
-        # # assigned topk should be unique, this is for dealing with empty labels
-        # # since empty labels will generate index `0` through `F.one_hot`
-        # # NOTE: but what if the topk_idxs include `0`?
-        # is_in_topk = torch.where(is_in_topk > 1, 0, is_in_topk)
-        # return is_in_topk.to(metrics.dtype)
+
 
 
     def get_targets(self, gt_labels, gt_bboxes, target_gt_idx, fg_mask):

@@ -302,3 +302,32 @@ class BottleneckCSP(nn.Module):
         y1 = self.cv3(self.m(self.cv1(x)))
         y2 = self.cv2(x)
         return self.cv4(self.act(self.bn(torch.cat((y1, y2), 1))))
+
+
+class MS2(nn.Module):
+
+    def __init__(self, c1, c2, n=1, merge=False, e=0.5):  # ch_in, ch_out, number, shortcut, groups, expansion
+        super().__init__()
+        c_2 = int(c2 * e)
+        self.slices = n + 1
+        self.merge = merge
+        c_1 = c_2 * self.slices   # hidden channels
+
+        self.cv1 = Conv(c1, c_1, 1, 1)
+        self.bottleneck_series = nn.ModuleList(
+            (Bottleneck(c_2, c_2, shortcut=False, g=1, k=(3, 3), e=1.0) for _ in range(n))
+        )
+        self.cv2 = Conv(c_1, c2, 1, 1)
+
+
+    def forward(self, x):
+        y = list(self.cv1(x).chunk(self.slices, 1))
+        for i, m in enumerate(self.bottleneck_series):
+            if self.merge:
+                y[i + 1] = m(y[i + 1]) + y[i]
+            else:
+                y[i + 1] = m(y[i + 1])
+
+        return self.cv2(torch.cat(y, dim=1))
+
+
