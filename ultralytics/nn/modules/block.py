@@ -315,7 +315,7 @@ class MS2(nn.Module):
 
         self.cv1 = Conv(c1, c_1, 1, 1)
         self.bottleneck_series = nn.ModuleList(
-            (Bottleneck(c_2, c_2, shortcut=False, g=1, k=(3, 3), e=1.0) for _ in range(n))
+            (Bottleneck(c_2, c_2, shortcut=False, g=1, k=(3, 3), e=1.125) for _ in range(n))
         )
         self.cv2 = Conv(c_1, c2, 1, 1)
 
