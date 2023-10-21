@@ -74,6 +74,7 @@ class Model:
         self.metrics = None  # validation/training metrics
         self.session = None  # HUB session
         self.task = task  # task type
+        self.half = False
         model = str(model).strip()  # strip spaces
 
         # Check if Ultralytics HUB model from https://hub.ultralytics.com
@@ -94,6 +95,7 @@ class Model:
     def __call__(self, source=None, stream=False, **kwargs):
         """Calls the 'predict' function with given arguments to perform object detection."""
         return self.predict(source, stream, **kwargs)
+
 
     @staticmethod
     def is_hub_model(model):

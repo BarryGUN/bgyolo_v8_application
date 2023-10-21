@@ -7,7 +7,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from .conv import Conv, DWConv, GhostConv, LightConv, RepConv
+from .conv import Conv, DWConv, GhostConv, LightConv, RepConv, RepXConv
 from .transformer import TransformerBlock
 
 __all__ = ('DFL', 'HGBlock', 'HGStem', 'SPP', 'SPPF', 'C1', 'C2', 'C3', 'C2f', 'C3x', 'C3TR', 'C3Ghost',
@@ -316,6 +316,20 @@ class RTMDetBottleneck(nn.Module):
     def forward(self, x):
         return x + self.cv2(self.cv1(x)) if self.add else self.cv2(self.cv1(x))
 
+class RepXBottleneck(nn.Module):
+    # Standard bottleneck
+    def __init__(self, c1, c2, shortcut=True, k=(3, 3, 5, 1), e=0.5):  # ch_in, ch_out, shortcut, kernels, groups, expand
+        super().__init__()
+        c_ = int(c2 * e)  # hidden channels
+        self.cv1 = Conv(c1, c_, k[0], 1)
+        self.cv2 = RepXConv(c_, (k[1], k[2]), 1)
+        self.cv3 = Conv(c_, c2, k[3], 1)
+        self.add = shortcut and c1 == c2
+
+    def forward(self, x):
+        return x + self.cv3(self.cv2(self.cv1(x))) if self.add else self.cv3(self.cv2(self.cv1(x)))
+
+
 class MS2(nn.Module):
 
     def __init__(self, c1, c2, n=1, merge=False, e=0.5):  # ch_in, ch_out, number, shortcut, groups, expansion
@@ -369,3 +383,24 @@ class MS2b(nn.Module):
 
         return self.cv2(torch.cat(y, dim=1))
 
+class C2RepX(nn.Module):
+    """Faster Implementation of CSP Bottleneck with 2 convolutions."""
+
+    def __init__(self, c1, c2, n=1, shortcut=False, e=0.5):  # ch_in, ch_out, number, shortcut, groups, expansion
+        super().__init__()
+        self.c = int(c2 * e)  # hidden channels
+        self.cv1 = Conv(c1, 2 * self.c, 1, 1)
+        self.cv2 = Conv((2 + n) * self.c, c2, 1)  # optional act=FReLU(c2)
+        self.m = nn.ModuleList(RepXBottleneck(self.c, self.c, shortcut, k=(3, 3, 5, 3), e=1.0) for _ in range(n))
+
+    def forward(self, x):
+        """Forward pass through C2f layer."""
+        y = list(self.cv1(x).chunk(2, 1))
+        y.extend(m(y[-1]) for m in self.m)
+        return self.cv2(torch.cat(y, 1))
+
+    def forward_split(self, x):
+        """Forward pass using split() instead of chunk()."""
+        y = list(self.cv1(x).split((self.c, self.c), 1))
+        y.extend(m(y[-1]) for m in self.m)
+        return self.cv2(torch.cat(y, 1))
