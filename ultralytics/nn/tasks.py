@@ -31,9 +31,6 @@ class BaseModel(nn.Module):
     The BaseModel class serves as a base class for all the models in the Ultralytics YOLO family.
     """
 
-    def switch_to_half(self):
-        raise NotImplementedError('switch_to_half() needs to be implemented by task heads')
-
     def forward(self, x, *args, **kwargs):
         """
         Forward pass of the model on a single scale.
@@ -147,6 +144,9 @@ class BaseModel(nn.Module):
                 if isinstance(m, RepXConv):
                     m.switch_to_deploy()
                     m.forward = m.forward_fuse  # update forward
+
+
+
 
             self.info(verbose=verbose)
 
