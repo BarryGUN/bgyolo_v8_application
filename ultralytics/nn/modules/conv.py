@@ -247,7 +247,7 @@ class RepXConv(nn.Module):
     default_act = nn.SiLU()
 
     # default silu
-    def __init__(self, dim, kernel_size=(5, 3),
+    def __init__(self, dim, kernel_size_dense=5, kernel_size_tiny=3,
                  stride=1, padding=None, dilation=1, padding_mode='zeros', act=True, deploy=False):
         super(RepXConv, self).__init__()
         """ Initialization of the class.
@@ -268,36 +268,35 @@ class RepXConv(nn.Module):
         self.deploy = deploy
 
         self.act = self.default_act if act is True else act if isinstance(act, nn.Module) else nn.Identity()
-        dense_kernel = max(kernel_size)
-        tiny_kernel = min(kernel_size)
 
         if deploy:
-            self.rbr_reparam = nn.Conv2d(in_channels=dim, out_channels=dim, kernel_size=dense_kernel,
+            self.rbr_reparam = nn.Conv2d(in_channels=dim, out_channels=dim, kernel_size=kernel_size_dense,
                                          stride=stride,
-                                         padding=autopad(dense_kernel, padding), dilation=dilation, groups=dim,
+                                         padding=autopad(kernel_size_dense, padding), dilation=dilation, groups=dim,
                                          bias=True,
                                          padding_mode=padding_mode)
         else:
 
-            self.rbr_dense = nn.Conv2d(dim, dim, dense_kernel, stride, autopad(dense_kernel, padding),
+            self.rbr_dense = nn.Conv2d(dim, dim, kernel_size_dense, stride, autopad(kernel_size_dense, padding),
                                        groups=dim,
                                        bias=False)
             self.rbr_dense_bn = nn.BatchNorm2d(num_features=dim)
 
-            self.rbr_3x3 = nn.Conv2d(dim, dim, tiny_kernel, stride, autopad(tiny_kernel, padding),
+            self.rbr_3x3 = nn.Conv2d(dim, dim, kernel_size_tiny, stride, autopad(kernel_size_tiny, padding),
                                      groups=dim,
                                      bias=False)
             self.rbr_3x3_bn = nn.BatchNorm2d(num_features=dim)
+            self.bn_main = nn.BatchNorm2d(num_features=dim)
 
     def forward(self, inputs):
-        return self.act(self.rbr_dense_bn(self.rbr_dense(inputs)) + self.rbr_3x3_bn(self.rbr_3x3(inputs)))  # 1
+        return self.act(self.bn_main(self.rbr_dense_bn(self.rbr_dense(inputs)) + self.rbr_3x3_bn(self.rbr_3x3(inputs))))  # 1
         # return self.act(self.rbr_dense_bn(self.rbr_dense(inputs) + self.rbr_3x3(inputs)))  # 2
         # return self.act(self.rbr_dense_bn(self.rbr_3x3_bn(self.rbr_dense(inputs)) + self.rbr_3x3(inputs))) # 3
 
     def forward_fuse(self, inputs):
-        return self.act(self.rbr_reparam(inputs))  # 1
+        # return self.act(self.rbr_reparam(inputs))  # 1
         # return self.act(self.rbr_reparam(inputs))  # 2
-        # return self.act(self.rbr_dense(self.rbr_reparam(inputs))) # 3
+        return self.act(self.bn_main(self.rbr_reparam(inputs))) # 3
 
 
     def get_equivalent_kernel_bias(self):

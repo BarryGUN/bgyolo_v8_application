@@ -316,14 +316,16 @@ class RTMDetBottleneck(nn.Module):
     def forward(self, x):
         return x + self.cv2(self.cv1(x)) if self.add else self.cv2(self.cv1(x))
 
+
 class RepXBottleneck(nn.Module):
     # Standard bottleneck
-    def __init__(self, c1, c2, shortcut=True, k=(3, 3, 5, 1), e=0.5):  # ch_in, ch_out, shortcut, kernels, groups, expand
+    def __init__(self, c1, c2, shortcut=True, k=(3, {'dense': 5, 'tiny': 3}, 1),
+                 e=0.5):  # ch_in, ch_out, shortcut, kernels, groups, expand
         super().__init__()
         c_ = int(c2 * e)  # hidden channels
         self.cv1 = Conv(c1, c_, k[0], 1)
-        self.cv2 = RepXConv(c_, (k[1], k[2]), 1)
-        self.cv3 = Conv(c_, c2, k[3], 1)
+        self.cv2 = RepXConv(c_, kernel_size_dense=k[1]['dense'], kernel_size_tiny=k[1]['tiny'], stride=1)
+        self.cv3 = Conv(c_, c2, k[2], 1)
         self.add = shortcut and c1 == c2
 
     def forward(self, x):
@@ -337,14 +339,13 @@ class MS2(nn.Module):
         c_2 = int(c2 * e)
         self.slices = n + 1
         self.merge = merge
-        c_1 = c_2 * self.slices   # hidden channels
+        c_1 = c_2 * self.slices  # hidden channels
 
         self.cv1 = Conv(c1, c_1, 1, 1)
         self.bottleneck_series = nn.ModuleList(
             (Bottleneck(c_2, c_2, shortcut=False, g=1, k=(3, 3), e=1) for _ in range(n))
         )
         self.cv2 = Conv(c_1, c2, 1, 1)
-
 
     def forward(self, x):
         y = list(self.cv1(x).chunk(self.slices, 1))
@@ -364,14 +365,13 @@ class MS2b(nn.Module):
         c_2 = int(c2 * e)
         self.slices = n + 1
         self.merge = merge
-        c_1 = c_2 * self.slices   # hidden channels
+        c_1 = c_2 * self.slices  # hidden channels
 
         self.cv1 = Conv(c1, c_1, 1, 1)
         self.bottleneck_series = nn.ModuleList(
             (RTMDetBottleneck(c_2, c_2, shortcut=False, e=1) for _ in range(n))
         )
         self.cv2 = Conv(c_1, c2, 1, 1)
-
 
     def forward(self, x):
         y = list(self.cv1(x).chunk(self.slices, 1))
@@ -383,6 +383,7 @@ class MS2b(nn.Module):
 
         return self.cv2(torch.cat(y, dim=1))
 
+
 class C2RepX(nn.Module):
     """Faster Implementation of CSP Bottleneck with 2 convolutions."""
 
@@ -391,7 +392,9 @@ class C2RepX(nn.Module):
         self.c = int(c2 * e)  # hidden channels
         self.cv1 = Conv(c1, 2 * self.c, 1, 1)
         self.cv2 = Conv((2 + n) * self.c, c2, 1)  # optional act=FReLU(c2)
-        self.m = nn.ModuleList(RepXBottleneck(self.c, self.c, shortcut, k=(3, 5, 3, 3), e=1.0) for _ in range(n))
+        self.m = nn.ModuleList(
+            RepXBottleneck(self.c, self.c, shortcut, k=(3,  {'dense': 5, 'tiny': 3}, 3), e=1.0)
+            for _ in range(n))
 
     def forward(self, x):
         """Forward pass through C2f layer."""
