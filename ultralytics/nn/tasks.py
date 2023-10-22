@@ -141,9 +141,9 @@ class BaseModel(nn.Module):
                 if isinstance(m, RepConv):
                     m.fuse_convs()
                     m.forward = m.forward_fuse  # update forward
-                # if isinstance(m, RepXConv):
-                #     m.switch_to_deploy()
-                #     m.forward = m.forward_fuse  # update forward
+                if isinstance(m, RepXConv):
+                    m.switch_to_deploy()
+                    m.forward = m.forward_fuse  # update forward
 
 
 
