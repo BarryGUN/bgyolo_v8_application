@@ -294,7 +294,9 @@ class RepXConv(nn.Module):
         return self.act(self.rbr_reparam(inputs))
 
     def get_equivalent_kernel_bias(self):
+
         kernel3x3_5x5, bia3x3_5x5 = self._fuse_bn_tensor(self.rbr_3x3.weight, *self._get_bn_params(self.rbr_3x3_bn))
+        print(self.rbr_3x3.kernel_size)
 
         return self._fuse_3x3_and_5x5_kernel(self._pad_3x3_to_5x5_tensor(kernel3x3_5x5),
                                              bia3x3_5x5,
