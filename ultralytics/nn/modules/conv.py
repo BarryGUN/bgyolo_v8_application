@@ -267,14 +267,13 @@ class RepXConv(nn.Module):
         """
         self.deploy = deploy
 
-
-
         self.act = self.default_act if act is True else act if isinstance(act, nn.Module) else nn.Identity()
 
         if deploy:
             self.rbr_reparam = nn.Conv2d(in_channels=dim, out_channels=dim, kernel_size=kernel_size,
                                          stride=stride,
-                                         padding=autopad(kernel_size[0], padding), dilation=dilation, groups=dim, bias=True,
+                                         padding=autopad(kernel_size[0], padding), dilation=dilation, groups=dim,
+                                         bias=True,
                                          padding_mode=padding_mode)
         else:
 
@@ -291,18 +290,16 @@ class RepXConv(nn.Module):
     def forward(self, inputs):
         return self.act(self.rbr_dense_bn(self.rbr_dense(inputs)) + self.rbr_3x3_bn(self.rbr_3x3(inputs)))
 
-
-
     def forward_fuse(self, inputs):
         return self.act(self.rbr_reparam(inputs))
 
-
     def get_equivalent_kernel_bias(self):
+        kernel3x3_5x5, bia3x3_5x5 = self._fuse_bn_tensor(self.rbr_3x3.weight[0], *self._get_bn_params(self.rbr_3x3_bn))
 
-        return self._fuse_3x3_and_5x5_kernel(*self._fuse_bn_tensor(self._pad_3x3_to_5x5_tensor(self.rbr_3x3.weight),
-                                                                   *self._get_bn_params(self.rbr_3x3_bn)),
-                                            *self._fuse_bn_tensor(self.rbr_dense.weight,
-                                                                  *self._get_bn_params(self.rbr_dense_bn)))
+        return self._fuse_3x3_and_5x5_kernel(self._pad_3x3_to_5x5_tensor(kernel3x3_5x5),
+                                             bia3x3_5x5,
+                                             *self._fuse_bn_tensor(self.rbr_dense.weight,
+                                                                   *self._get_bn_params(self.rbr_dense_bn)))
 
     def _pad_3x3_to_5x5_tensor(self, kernel3x3):
         if kernel3x3 is None:
@@ -320,7 +317,7 @@ class RepXConv(nn.Module):
         return running_mean, running_var, gamma, beta, eps
 
     def _fuse_3x3_and_5x5_kernel(self, k3x3, b3x3, k5x5, b5x5):
-        return k3x3 + k5x5, b3x3 +b5x5
+        return k3x3 + k5x5, b3x3 + b5x5
 
     def _fuse_bn_tensor(self, kernel, running_mean, running_var, gamma, beta, eps):
         std = (running_var + eps).sqrt()
