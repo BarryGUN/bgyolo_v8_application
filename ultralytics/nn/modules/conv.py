@@ -270,9 +270,9 @@ class RepXConv(nn.Module):
         self.act = self.default_act if act is True else act if isinstance(act, nn.Module) else nn.Identity()
 
         if deploy:
-            self.rbr_reparam = nn.Conv2d(in_channels=dim, out_channels=dim, kernel_size=kernel_size,
+            self.rbr_reparam = nn.Conv2d(in_channels=dim, out_channels=dim, kernel_size=max(kernel_size),
                                          stride=stride,
-                                         padding=autopad(kernel_size[0], padding), dilation=dilation, groups=dim,
+                                         padding=autopad(max(kernel_size), padding), dilation=dilation, groups=dim,
                                          bias=True,
                                          padding_mode=padding_mode)
         else:
@@ -353,7 +353,6 @@ class RepXConv(nn.Module):
                                      padding=self.rbr_dense.padding, dilation=self.rbr_dense.dilation,
                                      groups=self.rbr_dense.groups, bias=True)
 
-        print(self.rbr_reparam.kernel_size)
         self.rbr_reparam.weight.data = kernel
         self.rbr_reparam.bias.data = bias
         for para in self.parameters():
