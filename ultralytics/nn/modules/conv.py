@@ -315,7 +315,9 @@ class RepXConv(nn.Module):
 
         # 2
         kernel3x3_main = self._fuse_3x3_and_5x5_kernel(self._pad_3x3_to_5x5_tensor(self.rbr_3x3.weight),
-                                                       self.rbr_dense.weight)
+                                                       0,
+                                                       self.rbr_dense.weight,
+                                                       0)
         return self._fuse_bn_tensor(kernel3x3_main, *self._get_bn_params(self.rbr_dense_bn))
 
 
