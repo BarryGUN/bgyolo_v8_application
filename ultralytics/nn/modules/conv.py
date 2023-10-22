@@ -268,21 +268,23 @@ class RepXConv(nn.Module):
         self.deploy = deploy
 
         self.act = self.default_act if act is True else act if isinstance(act, nn.Module) else nn.Identity()
+        dense_kernel = max(kernel_size)
+        tiny_kernel = min(kernel_size)
 
         if deploy:
-            self.rbr_reparam = nn.Conv2d(in_channels=dim, out_channels=dim, kernel_size=max(kernel_size),
+            self.rbr_reparam = nn.Conv2d(in_channels=dim, out_channels=dim, kernel_size=dense_kernel,
                                          stride=stride,
-                                         padding=autopad(max(kernel_size), padding), dilation=dilation, groups=dim,
+                                         padding=autopad(dense_kernel, padding), dilation=dilation, groups=dim,
                                          bias=True,
                                          padding_mode=padding_mode)
         else:
 
-            self.rbr_dense = nn.Conv2d(dim, dim, kernel_size[0], stride, autopad(kernel_size[0], padding),
+            self.rbr_dense = nn.Conv2d(dim, dim, dense_kernel, stride, autopad(dense_kernel, padding),
                                        groups=dim,
                                        bias=False)
             self.rbr_dense_bn = nn.BatchNorm2d(num_features=dim)
 
-            self.rbr_3x3 = nn.Conv2d(dim, dim, kernel_size[1], stride, autopad(kernel_size[1], padding),
+            self.rbr_3x3 = nn.Conv2d(dim, dim, tiny_kernel, stride, autopad(tiny_kernel, padding),
                                      groups=dim,
                                      bias=False)
             self.rbr_3x3_bn = nn.BatchNorm2d(num_features=dim)
@@ -299,13 +301,6 @@ class RepXConv(nn.Module):
 
 
     def get_equivalent_kernel_bias(self):
-        if self.rbr_3x3.kernel_size > self.rbr_dense.kernel_size:
-            conv_small = self.rbr_dense
-            bn_small = self.rbr_3x3_bn
-            self.rbr_dense = self.rbr_3x3
-            self.rbr_dense_bn = self.rbr_3x3_bn
-            self.rbr_3x3 = conv_small
-            self.rbr_3x3_bn = bn_small
 
         # 1
         kernel3x3_5x5, bia3x3_5x5 = self._fuse_bn_tensor(self.rbr_3x3.weight, *self._get_bn_params(self.rbr_3x3_bn))
