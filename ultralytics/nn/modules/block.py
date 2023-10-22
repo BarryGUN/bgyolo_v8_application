@@ -419,7 +419,7 @@ class SplitMP(nn.Module):
         self.cv3 = Conv(int(c_ * 2), out_c, k=1, s=1)
 
     def forward(self, x):
-        cat_list = self.cv1(x).chunk(2, 1)
+        cat_list = list(self.cv1(x).chunk(2, 1))
         cat_list[0] = self.cv2(cat_list[0])
         cat_list[1] = self.m(cat_list[1])
         return self.cv3(torch.cat(cat_list, dim=1))
