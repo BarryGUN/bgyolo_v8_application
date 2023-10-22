@@ -288,14 +288,14 @@ class RepXConv(nn.Module):
             self.rbr_3x3_bn = nn.BatchNorm2d(num_features=dim)
 
     def forward(self, inputs):
-        # return self.act(self.rbr_dense_bn(self.rbr_dense(inputs)) + self.rbr_3x3_bn(self.rbr_3x3(inputs)))  # 1
+        return self.act(self.rbr_dense_bn(self.rbr_dense(inputs)) + self.rbr_3x3_bn(self.rbr_3x3(inputs)))  # 1
         # return self.act(self.rbr_dense_bn(self.rbr_dense(inputs) + self.rbr_3x3(inputs)))  # 2
-        return self.act(self.rbr_dense_bn(self.rbr_3x3_bn(self.rbr_dense(inputs)) + self.rbr_3x3(inputs))) # 3
+        # return self.act(self.rbr_dense_bn(self.rbr_3x3_bn(self.rbr_dense(inputs)) + self.rbr_3x3(inputs))) # 3
 
     def forward_fuse(self, inputs):
-        # return self.act(self.rbr_reparam(inputs))  # 1
+        return self.act(self.rbr_reparam(inputs))  # 1
         # return self.act(self.rbr_reparam(inputs))  # 2
-        return self.act(self.rbr_dense(self.rbr_reparam(inputs))) # 3
+        # return self.act(self.rbr_dense(self.rbr_reparam(inputs))) # 3
 
 
     def get_equivalent_kernel_bias(self):
@@ -308,13 +308,13 @@ class RepXConv(nn.Module):
             self.rbr_3x3_bn = bn_small
 
         # 1
-        # kernel3x3_5x5, bia3x3_5x5 = self._fuse_bn_tensor(self.rbr_3x3.weight, *self._get_bn_params(self.rbr_3x3_bn))
-        #
-        #
-        # return self._fuse_3x3_and_5x5_kernel(self._pad_3x3_to_5x5_tensor(kernel3x3_5x5),
-        #                                      bia3x3_5x5,
-        #                                      *self._fuse_bn_tensor(self.rbr_dense.weight,
-        #                                                            *self._get_bn_params(self.rbr_dense_bn)))
+        kernel3x3_5x5, bia3x3_5x5 = self._fuse_bn_tensor(self.rbr_3x3.weight, *self._get_bn_params(self.rbr_3x3_bn))
+
+
+        return self._fuse_3x3_and_5x5_kernel(self._pad_3x3_to_5x5_tensor(kernel3x3_5x5),
+                                             bia3x3_5x5,
+                                             *self._fuse_bn_tensor(self.rbr_dense.weight,
+                                                                   *self._get_bn_params(self.rbr_dense_bn)))
 
         # 2
         # kernel3x3_main = self._pad_3x3_to_5x5_tensor(self.rbr_3x3.weight) + self.rbr_dense.weight
