@@ -303,7 +303,7 @@ class RepXConv(nn.Module):
             self.rbr_3x3_bn = bn_small
 
         kernel3x3_5x5, bia3x3_5x5 = self._fuse_bn_tensor(self.rbr_3x3.weight, *self._get_bn_params(self.rbr_3x3_bn))
-        print(self.rbr_3x3.kernel_size)
+
 
         return self._fuse_3x3_and_5x5_kernel(self._pad_3x3_to_5x5_tensor(kernel3x3_5x5),
                                              bia3x3_5x5,
@@ -352,6 +352,8 @@ class RepXConv(nn.Module):
                                      kernel_size=self.rbr_dense.kernel_size, stride=self.rbr_dense.stride,
                                      padding=self.rbr_dense.padding, dilation=self.rbr_dense.dilation,
                                      groups=self.rbr_dense.groups, bias=True)
+
+        print(self.rbr_reparam.kernel_size)
         self.rbr_reparam.weight.data = kernel
         self.rbr_reparam.bias.data = bias
         for para in self.parameters():
