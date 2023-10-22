@@ -294,6 +294,13 @@ class RepXConv(nn.Module):
         return self.act(self.rbr_reparam(inputs))
 
     def get_equivalent_kernel_bias(self):
+        if self.rbr_3x3.kernel_size > self.rbr_dense.kernel_size:
+            conv_small = self.rbr_dense
+            bn_small = self.rbr_3x3_bn
+            self.rbr_dense = self.rbr_3x3
+            self.rbr_dense_bn = self.rbr_3x3_bn
+            self.rbr_3x3 = conv_small
+            self.rbr_3x3_bn = bn_small
 
         kernel3x3_5x5, bia3x3_5x5 = self._fuse_bn_tensor(self.rbr_3x3.weight, *self._get_bn_params(self.rbr_3x3_bn))
         print(self.rbr_3x3.kernel_size)
