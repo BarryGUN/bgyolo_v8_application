@@ -407,3 +407,19 @@ class C2RepX(nn.Module):
         y = list(self.cv1(x).split((self.c, self.c), 1))
         y.extend(m(y[-1]) for m in self.m)
         return self.cv2(torch.cat(y, 1))
+
+class SplitMP(nn.Module):
+
+    def __init__(self, in_c, out_c, k=2):
+        super().__init__()
+        c_ = int(out_c * 0.5)
+        self.cv1 = Conv(in_c, out_c, k=1, s=1)
+        self.m = nn.MaxPool2d(kernel_size=k, stride=k)
+        self.cv2 = Conv(c_, c_, k=3, s=2)
+        self.cv3 = Conv(int(c_ * 2), out_c, k=1, s=1)
+
+    def forward(self, x):
+        cat_list = self.cv1(x).chunk(2, 1)
+        cat_list[0] = self.cv2(cat_list[0])
+        cat_list[1] = self.m(cat_list[1])
+        return self.cv3(torch.cat(cat_list, dim=1))
