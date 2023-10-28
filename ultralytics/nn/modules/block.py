@@ -462,6 +462,28 @@ class MS2d(nn.Module):
 
         return self.cv2(torch.cat(y, dim=1))
 
+class MS2e(nn.Module):
+
+    def __init__(self, c1, c2, n=1, merge=False, e=0.5):  # ch_in, ch_out, number, shortcut, groups, expansion
+        super().__init__()
+        c_2 = int(c2 * e)
+        self.merge = merge
+
+        self.cv1 = Conv(c1, c2, 1, 1)
+        self.bottleneck_series = nn.ModuleList(
+            (CDCBottleneck(c_2, c_2, shortcut=False, e=1) for _ in range(n))
+        )
+        self.cv2 = Conv(int(n + 2) * c_2, c2, 1, 1)
+
+    def forward(self, x):
+        y = list(self.cv1(x).chunk(2, 1))
+        for i, m in enumerate(self.bottleneck_series):
+            if self.merge:
+                y.append(m(y[-1]) + y[0])
+            else:
+                y.append(m(y[-1]))
+
+        return self.cv2(torch.cat(y, dim=1))
 
 class C2RepX(nn.Module):
     """Faster Implementation of CSP Bottleneck with 2 convolutions."""

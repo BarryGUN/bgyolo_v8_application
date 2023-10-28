@@ -1,8 +1,8 @@
 from ultralytics import YOLO
 
 if __name__ == '__main__':
-    model = YOLO('yolov8m-ms2d-c2repx.yaml')
-    # model = YOLO('yolov8m.yaml')
+    # model = YOLO('yolov8m-ms2d-c2repx.yaml')
+    model = YOLO('yolov8m-ms2e-c2repx.yaml')
     model.train(data='vlpd.yaml',
                 epochs=500,
                 project='runs/detect/train/m',
