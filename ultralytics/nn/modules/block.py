@@ -384,7 +384,6 @@ class RepXBottleneck(nn.Module):
     def forward(self, x):
         return x + self.cv3(self.cv2(self.cv1(x))) if self.add else self.cv3(self.cv2(self.cv1(x)))
 
-
 class MS2(nn.Module):
 
     def __init__(self, c1, c2, n=1, merge=False, e=0.5):  # ch_in, ch_out, number, shortcut, groups, expansion

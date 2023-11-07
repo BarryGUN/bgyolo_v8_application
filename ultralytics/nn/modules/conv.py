@@ -146,8 +146,6 @@ class GhostConv(nn.Module):
         return torch.cat((y, self.cv2(y)), 1)
 
 
-
-
 class RepConv(nn.Module):
     """
     RepConv is a basic rep-style block, including training and deploy status. This module is used in RT-DETR.
@@ -291,21 +289,22 @@ class RepXConv(nn.Module):
             self.bn_main = nn.BatchNorm2d(num_features=dim)
 
     def forward(self, inputs):
-        return self.act(self.bn_main(self.rbr_dense_bn(self.rbr_dense(inputs)) + self.rbr_3x3_bn(self.rbr_3x3(inputs))))  # 1
+        return self.act(self.bn_main(
+            self.rbr_dense_bn(self.rbr_dense(inputs)) + self.rbr_3x3_bn(self.rbr_3x3(inputs))
+        )
+        )  # 1
         # return self.act(self.rbr_dense_bn(self.rbr_dense(inputs) + self.rbr_3x3(inputs)))  # 2
         # return self.act(self.rbr_dense_bn(self.rbr_3x3_bn(self.rbr_dense(inputs)) + self.rbr_3x3(inputs))) # 3
 
     def forward_fuse(self, inputs):
         # return self.act(self.rbr_reparam(inputs))  # 1
         # return self.act(self.rbr_reparam(inputs))  # 2
-        return self.act(self.bn_main(self.rbr_reparam(inputs))) # 3
-
+        return self.act(self.bn_main(self.rbr_reparam(inputs)))  # 3
 
     def get_equivalent_kernel_bias(self):
 
         # 1
         kernel3x3_5x5, bia3x3_5x5 = self._fuse_bn_tensor(self.rbr_3x3.weight, *self._get_bn_params(self.rbr_3x3_bn))
-
 
         return self._fuse_3x3_and_5x5_kernel(self._pad_3x3_to_5x5_tensor(kernel3x3_5x5),
                                              bia3x3_5x5,
@@ -366,8 +365,11 @@ class RepXConv(nn.Module):
             para.detach_()
         self.__delattr__('rbr_dense')
         self.__delattr__('rbr_3x3')
-        if hasattr(self, 'bn_5x5'):
-            self.__delattr__('bn_5x5')
+        if hasattr(self, 'rbr_dense_bn'):
+            self.__delattr__('rbr_dense_bn')
+
+        if hasattr(self, 'rbr_3x3_bn'):
+            self.__delattr__('rbr_3x3_bn')
         self.deploy = True
     # Represented convolution
     # https://arxiv.org/abs/2101.03697
