@@ -55,7 +55,7 @@ class RepXConvCCAB(nn.Module):
 
     def forward(self, inputs):
         # return self.act(self.bn_main(self.rbr_dense_bn(self.rbr_dense(inputs)) + self.rbr_3x3_bn(self.rbr_3x3(inputs))))  # 1
-        return self.act(self.rbr_dense_bn(self.rbr_dense(inputs) + self.rbr_3x3(inputs)))  # 2
+        return self.act(self.bn_main(self.rbr_dense(inputs) + self.rbr_3x3(inputs)))  # 2
         # return self.act(self.rbr_dense_bn(self.rbr_3x3_bn(self.rbr_dense(inputs)) + self.rbr_3x3(inputs))) # 3
 
     def forward_fuse(self, inputs):
