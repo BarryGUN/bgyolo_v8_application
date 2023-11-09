@@ -203,7 +203,7 @@ class RepXConvCBCBA(nn.Module):
     def get_equivalent_kernel_bias(self):
 
         # 1
-        kernel3x3_5x5, bia3x3_5x5 = self._fuse_bn_tensor(self.rbr_3x3.weight,
+        kernel3x3_5x5, bia3x3_5x5 = self._fuse_bn_tensor( self.rbr_3x3.weight,
                                                          *self._get_bn_params(self.rbr_3x3_bn))
 
         kernel5x5, bia5x5 = self._fuse_bn_tensor(self.rbr_dense.weight,
