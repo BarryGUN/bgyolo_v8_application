@@ -507,21 +507,16 @@ class C2d(nn.Module):
         self.shortcut = shortcut
 
         self.cv1 = Conv(c1, c2, 1, 1)
-        self.cv_d = DeformConv2d(c_2, c_2, 3, 1)
         self.bottleneck_series = nn.ModuleList(
-            DCBottleneck(c_2, c_2, shortcut=False, e=1) for _ in range(n)
+            DCBottleneck(c_2, c_2, shortcut=shortcut, e=1) for _ in range(n)
         )
-        self.cv2 = Conv(int(n + 2) * c_2, c2, 1, 1)
+        self.cv2 = Conv((2 + n) * c_2, c2, 1)
 
     def forward(self, x):
         y = list(self.cv1(x).chunk(2, 1))
-        for i, m in enumerate(self.bottleneck_series):
-            if self.shortcut:
-                y.append(m(y[-1]) + y[0])
-            else:
-                y.append(m(y[-1]))
+        y.extend(m(y[-1]) for m in self.bottleneck_series)
+        return self.cv2(torch.cat(y, 1))
 
-        return self.cv2(torch.cat(y, dim=1))
 
 
 
