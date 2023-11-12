@@ -508,7 +508,7 @@ class C2d(nn.Module):
 
         self.cv1 = Conv(c1, c2, 1, 1)
         self.bottleneck_series = nn.ModuleList(
-            DCBottleneck(c_2, c_2, shortcut=shortcut, e=1) for _ in range(n)
+            CDCBottleneck(c_2, c_2, shortcut=shortcut, e=1) for _ in range(n)
         )
         self.cv2 = Conv((2 + n) * c_2, c2, 1)
 
