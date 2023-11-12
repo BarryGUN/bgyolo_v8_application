@@ -8,7 +8,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from .conv import Conv, DWConv, GhostConv, LightConv, RepConv, RepXConv
+from .conv import Conv, DWConv, GhostConv, LightConv, RepConv, RepXConv, DeformConv2d
 from .transformer import TransformerBlock
 
 __all__ = ('DFL', 'HGBlock', 'HGStem', 'SPP', 'SPPF', 'C1', 'C2', 'C3', 'C2f', 'C3x', 'C3TR', 'C3Ghost',
@@ -334,6 +334,21 @@ class CDCBottleneck(nn.Module):
         """'forward()' applies the YOLOv5 FPN to input data."""
         return x + self.cv3(self.cv2(self.cv1(x))) if self.add else self.cv3(self.cv2(self.cv1(x)))
 
+class DCBottleneck(nn.Module):
+    """Standard bottleneck."""
+
+    def __init__(self, c1, c2, shortcut=True, k=(3, 3), e=0.5):  # ch_in, ch_out, shortcut, groups, kernels, expand
+        super().__init__()
+        c_ = int(c2 * e)  # hidden channels
+        self.cv1 = DeformConv2d(c1, c_, k[1], 1)
+        self.cv2 = Conv(c_, c2, k[0], 1)
+
+        self.add = shortcut and c1 == c2
+
+    def forward(self, x):
+        """'forward()' applies the YOLOv5 FPN to input data."""
+        return x + self.cv2(self.cv1(x)) if self.add else self.cv2(self.cv1(x))
+
 
 
 class BottleneckCSP(nn.Module):
@@ -483,6 +498,33 @@ class MS2e(nn.Module):
                 y.append(m(y[-1]))
 
         return self.cv2(torch.cat(y, dim=1))
+
+
+class C2d(nn.Module):
+    def __init__(self, c1, c2, n=1, shortcut=False, e=0.5):  # ch_in, ch_out, number, shortcut, groups, expansion
+        super().__init__()
+        c_2 = int(c2 * e)
+        self.shortcut = shortcut
+
+        self.cv1 = Conv(c1, c2, 1, 1)
+        self.cv_d = DeformConv2d(c_2, c_2, 3, 1)
+        self.bottleneck_series = nn.ModuleList(
+            DCBottleneck(c_2, c_2, shortcut=False, e=1) for _ in range(n)
+        )
+        self.cv2 = Conv(int(n + 2) * c_2, c2, 1, 1)
+
+    def forward(self, x):
+        y = list(self.cv1(x).chunk(2, 1))
+        for i, m in enumerate(self.bottleneck_series):
+            if self.shortcut:
+                y.append(m(y[-1]) + y[0])
+            else:
+                y.append(m(y[-1]))
+
+        return self.cv2(torch.cat(y, dim=1))
+
+
+
 
 class C2RepX(nn.Module):
     """Faster Implementation of CSP Bottleneck with 2 convolutions."""
