@@ -565,6 +565,7 @@ class C2RepX(nn.Module):
         y.extend(m(y[-1]) for m in self.m)
         return self.cv2(torch.cat(y, 1))
 
+
 class C2RepXc(nn.Module):
     """Faster Implementation of CSP Bottleneck with 2 convolutions."""
 
@@ -607,3 +608,38 @@ class SplitMP(nn.Module):
         cat_list[0] = self.cv2(cat_list[0])
         cat_list[1] = self.m(cat_list[1])
         return self.cv3(torch.cat(cat_list, dim=1))
+
+
+class BiFuse(nn.Module):
+
+    def __init__(self, c1_list, c2, n):
+        super(BiFuse, self).__init__()
+        # 设置可学习参数 nn.Parameter的作用是：将一个不可训练的类型Tensor转换成可以训练的类型parameter
+        # 并且会向宿主模型注册该参数 成为其一部分 即model.parameters()会包含这个parameter
+        # 从而在参数优化的时候可以自动一起优化
+        self.w = nn.Parameter(torch.ones(n, dtype=torch.float32), requires_grad=True)
+        self.epsilon = 0.0001
+        self.conv = nn.Conv2d(max(c1_list), c2, kernel_size=1, stride=1, padding=0)
+        self.act = nn.SiLU()
+        self.n = n
+        self.c1_max = max(c1_list)
+        align_c = []
+        self.align_index = []
+        for i, c in enumerate(c1_list):
+            if c < self.c1_max:
+                align_c.append(c)
+                self.align_index.append(i)
+        self.align_conv = nn.ModuleList(
+            Conv(i, self.c1_max, k=1, s=1)
+            for i in align_c)
+
+    def forward(self, x):
+        x = x
+        for i, xi in enumerate(self.align_index):
+            x[xi] = self.align_conv[i](x[xi])
+        w = self.w
+        weight = w / (torch.sum(w, dim=0) + self.epsilon)
+        out = 0
+        for i in range(self.n):
+            out += weight[i] * x[i]
+        return self.conv(self.act(out))

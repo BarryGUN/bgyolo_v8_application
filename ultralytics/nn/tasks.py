@@ -11,7 +11,7 @@ from ultralytics.nn.modules import (AIFI, C1, C2, C3, C3TR, SPP, SPPF, Bottlenec
                                     Classify, Concat, Conv, Conv2, ConvTranspose, Detect, DWConv, DWConvTranspose2d,
                                     Focus, GhostBottleneck, GhostConv, HGBlock, HGStem, Pose, RepC3, RepConv,
                                     RTDETRDecoder, Segment)
-from ultralytics.nn.modules.block import MS2, MS2b, C2RepX, SplitMP, SPPFCSP, MS2d, MS2e, C2d, C2sc, C2RepXc
+from ultralytics.nn.modules.block import MS2, MS2b, C2RepX, SplitMP, SPPFCSP, MS2d, MS2e, C2d, C2sc, C2RepXc, BiFuse
 from ultralytics.nn.modules.block_controlled_trial import C2RepXCCAB, C2RepXCBCBA
 from ultralytics.nn.modules.conv import RepXConv
 from ultralytics.nn.modules.repxconv_controlled_trial import RepXConvCCAB, RepXConvCBCBA
@@ -658,16 +658,29 @@ def parse_model(d, ch, verbose=True):  # model_dict, input_channels(3)
         n = n_ = max(round(n * depth), 1) if n > 1 else n  # depth gain
         if m in (Classify, Conv, ConvTranspose, GhostConv, Bottleneck, GhostBottleneck, SPP, SPPF, SPPFCSP, DWConv, Focus,
                  BottleneckCSP, C1, C2, C2f, C3, C3TR, C3Ghost, nn.ConvTranspose2d, DWConvTranspose2d, C3x, RepC3,
-                 MS2, MS2b, C2RepX, SplitMP, MS2d, MS2e, C2RepXCCAB, C2RepXCBCBA, C2d, C2sc, C2RepXc):
-            c1, c2 = ch[f], args[0]
-            if c2 != nc:  # if c2 not equal to number of classes (i.e. for Classify() output)
+                 MS2, MS2b, C2RepX, SplitMP, MS2d, MS2e, C2RepXCCAB, C2RepXCBCBA, C2d, C2sc, C2RepXc, BiFuse):
+            if m is BiFuse:
+                c_list = list(ch[i] for i in f)
+                # if len(set(c_list)) > 1:
+                #     print()
+                #     raise EOFError(f'Tensors are not in same size, get size:{c_list} ')
+                # else:
+                c1, c2 = c_list, args[0]
                 c2 = make_divisible(min(c2, max_channels) * width, 8)
+                args = [c1, c2, *args[1:]]
 
-            args = [c1, c2, *args[1:]]
-            if m in (BottleneckCSP, C1, C2, C2f, C3, C3TR, C3Ghost, C3x, RepC3, MS2, MS2b, C2RepX,
-                     MS2d, MS2e, C2RepXCCAB, C2RepXCBCBA, C2d, C2sc, C2RepXc):
-                args.insert(2, n)  # number of repeats
-                n = 1
+            else:
+                c1, c2 = ch[f], args[0]
+                if c2 != nc:  # if c2 not equal to number of classes (i.e. for Classify() output)
+                    c2 = make_divisible(min(c2, max_channels) * width, 8)
+
+                args = [c1, c2, *args[1:]]
+                if m in (BottleneckCSP, C1, C2, C2f, C3, C3TR, C3Ghost, C3x, RepC3, MS2, MS2b, C2RepX,
+                         MS2d, MS2e, C2RepXCCAB, C2RepXCBCBA, C2d, C2sc, C2RepXc):
+                    args.insert(2, n)  # number of repeats
+                    n = 1
+
+
         elif m is AIFI:
             args = [ch[f], *args]
         elif m in (HGStem, HGBlock):
@@ -681,6 +694,7 @@ def parse_model(d, ch, verbose=True):  # model_dict, input_channels(3)
             args = [ch[f]]
         elif m is Concat:
             c2 = sum(ch[x] for x in f)
+
         elif m in (Detect, Segment, Pose):
             args.append([ch[x] for x in f])
             if m is Segment:
