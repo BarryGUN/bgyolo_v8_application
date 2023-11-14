@@ -647,3 +647,21 @@ class BiFuse(nn.Module):
             out += weight[i] * y[i]
         # return self.conv(self.act(out))
         return self.conv(out)
+
+
+class BiConcat(nn.Module):
+
+    def __init__(self, n, dimension=1):
+        super(BiConcat, self).__init__()
+        self.d = dimension
+        self.n = n
+        self.w = nn.Parameter(torch.ones(self.n, dtype=torch.float32), requires_grad=True)
+        self.epsilon = 0.0001
+
+    def forward(self, x):
+        w = self.w
+        weight = w / (torch.sum(w, dim=0) + self.epsilon)  # 将权重进行归一化
+        # Fast normalized fusion
+        for i in range(self.n):
+            x[i] = weight[i] * x[i]
+        return torch.cat(x, self.d)
