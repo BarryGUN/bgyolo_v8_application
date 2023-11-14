@@ -55,5 +55,5 @@ head:
   - [[21, 9], 1, Concat, [1]]  # cat backbone P4
   - [-1, 1, Conv, [1024, 1, 1]] # 27
 
-  - [[23, 25, 25], 1, Detect, [nc]]  # Detect(P3, P4, P5)
+  - [[23, 25, 27], 1, Detect, [nc]]  # Detect(P3, P4, P5)
 
