@@ -45,14 +45,15 @@ head:
 
   # 80x80fuse
   - [[15, 4], 1, Concat, [1]]  # cat backbone P4 P16
-  - [-1, 1, Conv, [512, 1, 1]] # 23
-  -
+  - [-1, 1, Conv, [256, 1, 1]] # 23
+
   # 40x40fuse
   - [[18, 6], 1, Concat, [1]]  # cat backbone P4
   - [-1, 1, Conv, [512, 1, 1]]  # 25
 
   # 20x20fuse
   - [[21, 9], 1, Concat, [1]]  # cat backbone P4
-  - [-1, 1, Conv, [512, 1, 1]] # 27
+  - [-1, 1, Conv, [1024, 1, 1]] # 27
 
-  - [[15, 18, 21], 1, Detect, [nc]]  # Detect(P3, P4, P5)
+  - [[23, 25, 25], 1, Detect, [nc]]  # Detect(P3, P4, P5)
+
