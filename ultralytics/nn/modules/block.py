@@ -612,17 +612,19 @@ class SplitMP(nn.Module):
 
 class BiFuse(nn.Module):
 
-    def __init__(self, c1_list, c2, n):
+    def __init__(self, c1_list, c2):
         super(BiFuse, self).__init__()
         # 设置可学习参数 nn.Parameter的作用是：将一个不可训练的类型Tensor转换成可以训练的类型parameter
         # 并且会向宿主模型注册该参数 成为其一部分 即model.parameters()会包含这个parameter
         # 从而在参数优化的时候可以自动一起优化
-        self.w = nn.Parameter(torch.ones(n, dtype=torch.float32), requires_grad=True)
+        self.n = len(c1_list)
+        self.w = nn.Parameter(torch.ones(self.n, dtype=torch.float32), requires_grad=True)
         self.epsilon = 0.0001
-        self.conv = nn.Conv2d(max(c1_list), c2, kernel_size=1, stride=1, padding=0)
-        self.act = nn.SiLU()
-        self.n = n
+        # c1_ = int(sum(c1_list) / self.n)
         self.c1_max = max(c1_list)
+        # self.conv = nn.Conv2d(self.c1_max, c2, kernel_size=1, stride=1, padding=0)
+        # self.act = nn.SiLU()
+        self.conv = Conv(self.c1_max, c2, k=1, s=1)
         align_c = []
         self.align_index = []
         for i, c in enumerate(c1_list):
@@ -634,12 +636,14 @@ class BiFuse(nn.Module):
             for i in align_c)
 
     def forward(self, x):
-        x = x
+        # x = list(torch.cat(x, dim=1).chunk(self.n, 1))       # x = x
+        y = x
         for i, xi in enumerate(self.align_index):
-            x[xi] = self.align_conv[i](x[xi])
+            y[xi] = self.align_conv[i](y[xi])
         w = self.w
         weight = w / (torch.sum(w, dim=0) + self.epsilon)
         out = 0
         for i in range(self.n):
-            out += weight[i] * x[i]
-        return self.conv(self.act(out))
+            out += weight[i] * y[i]
+        # return self.conv(self.act(out))
+        return self.conv(out)
