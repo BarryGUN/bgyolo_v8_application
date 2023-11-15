@@ -666,6 +666,24 @@ class BiConcat(nn.Module):
             x[i] = weight[i] * x[i]
         return torch.cat(x, self.d)
 
+class BinConcat(nn.Module):
+
+    def __init__(self, n, out, dimension=1):
+        super(BinConcat, self).__init__()
+        self.d = dimension
+        self.n = n
+        self.w = nn.Parameter(torch.ones(self.n, dtype=torch.float32), requires_grad=True)
+        self.epsilon = 0.0001
+        self.bn = nn.BatchNorm2d(out)
+
+    def forward(self, x):
+        w = self.w
+        weight = w / (torch.sum(w, dim=0) + self.epsilon)  # 将权重进行归一化
+        # Fast normalized fusion
+        for i in range(self.n):
+            x[i] = weight[i] * x[i]
+        return self.bn(torch.cat(x, self.d))
+
 
 class C2fBi(nn.Module):
     """Faster Implementation of CSP Bottleneck with 2 convolutions."""
