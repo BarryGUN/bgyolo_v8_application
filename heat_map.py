@@ -7,7 +7,7 @@ import numpy as np
 
 np.random.seed(0)
 import matplotlib.pyplot as plt
-from tqdm import trange
+from tqdm import trange, tqdm
 from PIL import Image
 from ultralytics.nn.tasks import DetectionModel as Model
 from ultralytics.utils.torch_utils import intersect_dicts
@@ -52,7 +52,7 @@ def letterbox(im, new_shape=(640, 640), color=(114, 114, 114), auto=True, scaleF
 
 
 class yolov8_heatmap:
-    def __init__(self, weight, cfg, device, method, layer, backward_type, conf_threshold, ratio):
+    def __init__(self, weight, cfg, device, method, layer, backward_type, conf_threshold, ratio, pile, plot):
         device = torch.device(device)
         ckpt = torch.load(weight)
         model_names = ckpt['model'].names
@@ -104,8 +104,14 @@ class yolov8_heatmap:
         result = grads(tensor)
         activations = grads.activations[0].cpu().detach().numpy()
 
+
+        pile_image = None
+        detail_dicts = []
+
+
         # postprocess to yolo output
         post_result, pre_post_boxes, post_boxes = self.post_process(result[0])
+
         for i in trange(int(post_result.size(0) * self.ratio)):
             if float(post_result[i].max()) < self.conf_threshold:
                 break
@@ -141,29 +147,63 @@ class yolov8_heatmap:
                 continue
             saliency_map = (saliency_map - saliency_map_min) / (saliency_map_max - saliency_map_min)
 
-            # add heatmap and box to image
-            cam_image = show_cam_on_image(img.copy(), saliency_map, use_rgb=True)
-            cam_image = self.draw_detections(post_boxes[i], self.colors[int(post_result[i, :].argmax())],
-                                             f'{self.model_names[int(post_result[i, :].argmax())]} {float(post_result[i].max()):.2f}',
-                                             cam_image)
-            cam_image = Image.fromarray(cam_image)
-            cam_image.save(f'{save_path}/{i}.png')
+            el_post_boxes = post_boxes[i]
+            el_colors = self.colors[int(post_result[i, :].argmax())]
+            el_tags = f'{self.model_names[int(post_result[i, :].argmax())]} {float(post_result[i].max()):.2f}'
+
+            # cam_image = show_cam_on_image(img.copy(), saliency_map, use_rgb=True, image_weight=0.4)
+            cam_image = show_cam_on_image(img.copy(), saliency_map, use_rgb=True, image_weight=0.4)
+            if self.pile:
+                detail_dicts.append({
+                    'post_boxes': el_post_boxes,
+                    'colors': el_colors,
+                    'tags': el_tags
+
+                })
+                cam_image = Image.fromarray(cam_image)
+                if i == 0:
+                    pile_image = cam_image
+                else:
+                    pile_image = Image.blend(pile_image, cam_image, alpha=0.5)
+            else:
+                # add heatmap and box to image
+                if self.plot:
+                    cam_image = self.draw_detections(el_post_boxes, el_colors,
+                                                 el_tags,
+                                                 cam_image)
+                cam_image = Image.fromarray(cam_image)
+                cam_image.save(f'{save_path}/{i}.png')
+
+        if self.pile:
+
+            pile_array = np.asarray(pile_image)
+            if self.plot:
+                for el in tqdm(detail_dicts, desc='plot labels (only for pile mode): '):
+                    pile_array = self.draw_detections(el['post_boxes'],
+                                                      el['colors'],
+                                                      el['tags'],
+                                                      pile_array)
+
+            pile_image = Image.fromarray(pile_array)
+            pile_image.save(f'{save_path}/{i}.png')
 
 
 def get_params():
     params = {
-        'weight': 'yolov8n.pt',
-        'cfg': 'ultralytics/cfg/models/v8/yolov8n.yaml',
+        'weight': 'yolov8n-bdd100k.pt',
+        'cfg': 'ultralytics/cfg/models/v8/bdd100k/yolov8.yaml',
         'device': 'cuda:0',
-        'method': 'GradCAM',  # GradCAMPlusPlus, GradCAM, XGradCAM
-        'layer': 'model.model[8]',
+        'method': 'XGradCAM',  # GradCAMPlusPlus, GradCAM, XGradCAM
+        'layer': 'model.model[4]',
         'backward_type': 'all',  # class, box, all
-        'conf_threshold': 0.7,  # 0.6
-        'ratio': 0.02  # 0.02-0.1
+        'conf_threshold': 0.5,  # 0.6
+        'ratio': 0.02,  # 0.02-0.1
+        'pile': True,
+        'plot': True
     }
     return params
 
 
 if __name__ == '__main__':
     model = yolov8_heatmap(**get_params())
-    model(r'ultralytics/assets/bus.jpg', 'runs/heat/result')
+    model(r'demo/002.jpg', 'runs/heat/result/002-p4-pile')
