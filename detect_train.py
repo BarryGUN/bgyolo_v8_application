@@ -2,7 +2,7 @@ from ultralytics import YOLO
 
 if __name__ == '__main__':
     # model = YOLO('yolov8m-ms2d-c2repx.yaml')
-    model = YOLO('bdd100k/yolov8n-c2x.yaml')
+    model = YOLO('bdd100k/yolov8n-bibncat.yaml')
     # model = YOLO('yolov8n.yaml')
     model.train(data='coco128.yaml',
                 epochs=500,

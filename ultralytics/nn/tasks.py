@@ -12,7 +12,7 @@ from ultralytics.nn.modules import (AIFI, C1, C2, C3, C3TR, SPP, SPPF, Bottlenec
                                     Focus, GhostBottleneck, GhostConv, HGBlock, HGStem, Pose, RepC3, RepConv,
                                     RTDETRDecoder, Segment)
 from ultralytics.nn.modules.block import MS2, MS2b, C2RepX, SplitMP, SPPFCSP, MS2d, MS2e, C2d, C2sc, C2RepXc, BiFuse, \
-    BiConcat, C2fBi, BinConcat, C2x
+    BiConcat, C2fBi, BinConcat, C2x, BibnConcat
 from ultralytics.nn.modules.block_controlled_trial import C2RepXCCAB, C2RepXCBCBA
 from ultralytics.nn.modules.conv import RepXConv
 from ultralytics.nn.modules.repxconv_controlled_trial import RepXConvCCAB, RepXConvCBCBA
@@ -692,9 +692,9 @@ def parse_model(d, ch, verbose=True):  # model_dict, input_channels(3)
             args = [ch[f]]
         elif m is Concat:
             c2 = sum(ch[x] for x in f)
-        elif m in [BiConcat, BinConcat]:
+        elif m in [BiConcat, BinConcat, BibnConcat]:
             c2 = sum(ch[x] for x in f)
-            if m is BinConcat:
+            if m in [BinConcat, BibnConcat]:
                 args = [len(f), c2 ,args[0]]
             else:
                 args = [len(f), args[0]]
