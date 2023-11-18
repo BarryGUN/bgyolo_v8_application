@@ -284,6 +284,11 @@ class BaseTrainer:
         self.stopper, self.stop = EarlyStopping(patience=self.args.patience), False
         self.resume_training(ckpt)
         self.scheduler.last_epoch = self.start_epoch - 1  # do not move
+
+        # optional Loss
+        if self.args.task is 'detect':
+            LOGGER.info(f"{colorstr('WIoULoss')}: {self.args.wiou}")
+
         self.run_callbacks('on_pretrain_routine_end')
 
     def _do_train(self, world_size=1):
@@ -345,7 +350,8 @@ class BaseTrainer:
                 # Forward
                 with torch.cuda.amp.autocast(self.amp):
                     batch = self.preprocess_batch(batch)
-                    self.loss, self.loss_items = self.model(batch)
+                    # self.loss, self.loss_items = self.model(batch)
+                    self.loss, self.loss_items = self.model(batch, epoch=epoch)
                     if RANK != -1:
                         self.loss *= world_size
                     self.tloss = (self.tloss * i + self.loss_items) / (i + 1) if self.tloss is not None \

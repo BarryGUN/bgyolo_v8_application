@@ -7,6 +7,7 @@ import torch.nn.functional as F
 from ultralytics.utils.metrics import OKS_SIGMA
 from ultralytics.utils.ops import crop_mask, xywh2xyxy, xyxy2xywh
 from ultralytics.utils.tal import TaskAlignedAssigner, dist2bbox, make_anchors
+from . import LOGGER, colorstr
 
 from .metrics import bbox_iou
 from .tal import bbox2dist
@@ -55,17 +56,39 @@ class FocalLoss(nn.Module):
 
 class BboxLoss(nn.Module):
 
-    def __init__(self, reg_max, use_dfl=False):
+    def __init__(self, reg_max, use_dfl=False, WIoU=False, batch_size=2, gamma=1.9, delta=3):
         """Initialize the BboxLoss module with regularization maximum and DFL settings."""
         super().__init__()
         self.reg_max = reg_max
         self.use_dfl = use_dfl
+        self.WIoU = WIoU
+        if WIoU:
+            self.WIoUDict = {
+                'batch_size': batch_size,
+                'gamma' : gamma,
+                'delta': delta
+            }
 
-    def forward(self, pred_dist, pred_bboxes, anchor_points, target_bboxes, target_scores, target_scores_sum, fg_mask):
+    def forward(self, pred_dist,
+                pred_bboxes,
+                anchor_points,
+                target_bboxes,
+                target_scores,
+                target_scores_sum,
+                fg_mask,
+                epoch):
         """IoU loss."""
         weight = target_scores.sum(-1)[fg_mask].unsqueeze(-1)
-        iou = bbox_iou(pred_bboxes[fg_mask], target_bboxes[fg_mask], xywh=False, CIoU=True)
-        loss_iou = ((1.0 - iou) * weight).sum() / target_scores_sum
+        # iou = bbox_iou(pred_bboxes[fg_mask], target_bboxes[fg_mask], xywh=False, CIoU=True)
+
+
+        if self.WIoU:
+            self.WIoUDict['epoch'] = epoch
+            iou = bbox_iou(pred_bboxes[fg_mask], target_bboxes[fg_mask], xywh=False, CIoU=False, WIoU=True, WIoUDict=self.WIoUDict)
+            loss_iou = (iou[0] * iou[1] * weight).sum() / target_scores_sum
+        else:
+            iou = bbox_iou(pred_bboxes[fg_mask], target_bboxes[fg_mask], xywh=False, CIoU=True)
+            loss_iou = ((1.0 - iou) * weight).sum() / target_scores_sum
 
         # DFL loss
         if self.use_dfl:
@@ -121,11 +144,19 @@ class v8DetectionLoss:
         self.no = m.no
         self.reg_max = m.reg_max
         self.device = device
-
+        self.epoch = 0
         self.use_dfl = m.reg_max > 1
-
         self.assigner = TaskAlignedAssigner(topk=10, num_classes=self.nc, alpha=0.5, beta=6.0)
-        self.bbox_loss = BboxLoss(m.reg_max - 1, use_dfl=self.use_dfl).to(device)
+        if self.hyp.wiou:
+            self.bbox_loss = BboxLoss(m.reg_max - 1,
+                                      use_dfl=self.use_dfl,
+                                      WIoU=self.hyp.wiou,
+                                      gamma=self.hyp.gamma,
+                                      delta=self.hyp.delta,
+                                      batch_size=self.hyp.batch).to(device)
+
+        else:
+            self.bbox_loss = BboxLoss(m.reg_max - 1, use_dfl=self.use_dfl)
         self.proj = torch.arange(m.reg_max, dtype=torch.float, device=device)
 
     def preprocess(self, targets, batch_size, scale_tensor):
@@ -154,6 +185,9 @@ class v8DetectionLoss:
             # pred_dist = (pred_dist.view(b, a, c // 4, 4).softmax(2) * self.proj.type(pred_dist.dtype).view(1, 1, -1, 1)).sum(2)
         return dist2bbox(pred_dist, anchor_points, xywh=False)
 
+    def update_epoch(self, epoch):
+        self.epoch = epoch
+
     def __call__(self, preds, batch):
         """Calculate the sum of the loss for box, cls and dfl multiplied by batch size."""
         loss = torch.zeros(3, device=self.device)  # box, cls, dfl
@@ -177,7 +211,9 @@ class v8DetectionLoss:
 
         # pboxes
         pred_bboxes = self.bbox_decode(anchor_points, pred_distri)  # xyxy, (b, h*w, 4)
-
+        if self.hyp.wiou:
+            self.bbox_loss.WIoUDict['epoch'] = self.epoch
+            self.assigner.setWIoU(self.bbox_loss.WIoUDict)
         _, target_bboxes, target_scores, fg_mask, _ = self.assigner(
             pred_scores.detach().sigmoid(), (pred_bboxes.detach() * stride_tensor).type(gt_bboxes.dtype),
             anchor_points * stride_tensor, gt_labels, gt_bboxes, mask_gt)
@@ -192,7 +228,7 @@ class v8DetectionLoss:
         if fg_mask.sum():
             target_bboxes /= stride_tensor
             loss[0], loss[2] = self.bbox_loss(pred_distri, pred_bboxes, anchor_points, target_bboxes, target_scores,
-                                              target_scores_sum, fg_mask)
+                                              target_scores_sum, fg_mask, epoch=self.epoch)
 
         loss[0] *= self.hyp.box  # box gain
         loss[1] *= self.hyp.cls  # cls gain

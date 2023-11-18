@@ -15,6 +15,34 @@ from ultralytics.utils import LOGGER, SimpleClass, TryExcept, plt_settings
 OKS_SIGMA = np.array([.26, .25, .25, .35, .35, .79, .79, .72, .72, .62, .62, 1.07, 1.07, .87, .87, .89, .89]) / 10.0
 
 
+class WIoU_Scale:
+    iou_mean = 1.
+    _momentum = 1 - 0.5 ** (1 / 7000)
+    _is_train = True
+    gamma = 1.9
+    delta = 3
+
+    def __init__(self, iou, batch_size, epoch, gamma=1.9, delta=3):
+        self.iou = iou
+        self.delta = delta
+        self.gamma = gamma
+        epoch += 1
+        self._update(self, batch_size, epoch)
+
+    @classmethod
+    def _update(cls, self, batch_size, epoch):
+        if cls._is_train:
+            cls._momentum = 1 - 0.5 ** (1 / batch_size * epoch)
+            cls.iou_mean = (1 - cls._momentum) * cls.iou_mean + \
+                           cls._momentum * self.iou.detach().mean().item()
+
+    @classmethod
+    def _scaled_loss(cls, self):
+        beta = self.iou.detach() / self.iou_mean
+        alpha = cls.delta * torch.pow(cls.gamma, beta - cls.delta)
+        return beta / alpha
+
+
 def bbox_ioa(box1, box2, iou=False, eps=1e-7):
     """
     Calculate the intersection over box2 area given box1 and box2. Boxes are in x1y1x2y2 format.
@@ -70,7 +98,15 @@ def box_iou(box1, box2, eps=1e-7):
     return inter / ((a2 - a1).prod(2) + (b2 - b1).prod(2) - inter + eps)
 
 
-def bbox_iou(box1, box2, xywh=True, GIoU=False, DIoU=False, CIoU=False, eps=1e-7):
+def bbox_iou(box1,
+             box2,
+             xywh=True,
+             GIoU=False,
+             DIoU=False,
+             CIoU=False,
+             WIoU=False,
+             eps=1e-7,
+             WIoUDict={}):
     """
     Calculate Intersection over Union (IoU) of box1(1, 4) to box2(n, 4).
 
@@ -107,12 +143,30 @@ def bbox_iou(box1, box2, xywh=True, GIoU=False, DIoU=False, CIoU=False, eps=1e-7
     # Union Area
     union = w1 * h1 + w2 * h2 - inter + eps
 
+    # # IoU
+    # iou = inter / union
+    # if CIoU or DIoU or GIoU:
+    #     cw = b1_x2.maximum(b2_x2) - b1_x1.minimum(b2_x1)  # convex (smallest enclosing box) width
+    #     ch = b1_y2.maximum(b2_y2) - b1_y1.minimum(b2_y1)  # convex height
+    #     if CIoU or DIoU:  # Distance or Complete IoU https://arxiv.org/abs/1911.08287v1
+    #         c2 = cw ** 2 + ch ** 2 + eps  # convex diagonal squared
+    #         rho2 = ((b2_x1 + b2_x2 - b1_x1 - b1_x2) ** 2 + (b2_y1 + b2_y2 - b1_y1 - b1_y2) ** 2) / 4  # center dist ** 2
+    #         if CIoU:  # https://github.com/Zzh-tju/DIoU-SSD-pytorch/blob/master/utils/box/box_utils.py#L47
+    #             v = (4 / math.pi ** 2) * (torch.atan(w2 / h2) - torch.atan(w1 / h1)).pow(2)
+    #             with torch.no_grad():
+    #                 alpha = v / (v - iou + (1 + eps))
+    #             return iou - (rho2 / c2 + v * alpha)  # CIoU
+    #         return iou - rho2 / c2  # DIoU
+    #     c_area = cw * ch + eps  # convex area
+    #     return iou - (c_area - union) / c_area  # GIoU https://arxiv.org/pdf/1902.09630.pdf
+
     # IoU
     iou = inter / union
-    if CIoU or DIoU or GIoU:
+
+    if CIoU or DIoU or GIoU or WIoU:
         cw = b1_x2.maximum(b2_x2) - b1_x1.minimum(b2_x1)  # convex (smallest enclosing box) width
         ch = b1_y2.maximum(b2_y2) - b1_y1.minimum(b2_y1)  # convex height
-        if CIoU or DIoU:  # Distance or Complete IoU https://arxiv.org/abs/1911.08287v1
+        if CIoU or DIoU or WIoU:  # Distance or Complete IoU https://arxiv.org/abs/1911.08287v1
             c2 = cw ** 2 + ch ** 2 + eps  # convex diagonal squared
             rho2 = ((b2_x1 + b2_x2 - b1_x1 - b1_x2) ** 2 + (b2_y1 + b2_y2 - b1_y1 - b1_y2) ** 2) / 4  # center dist ** 2
             if CIoU:  # https://github.com/Zzh-tju/DIoU-SSD-pytorch/blob/master/utils/box/box_utils.py#L47
@@ -120,9 +174,20 @@ def bbox_iou(box1, box2, xywh=True, GIoU=False, DIoU=False, CIoU=False, eps=1e-7
                 with torch.no_grad():
                     alpha = v / (v - iou + (1 + eps))
                 return iou - (rho2 / c2 + v * alpha)  # CIoU
+
+            if WIoU:
+                self = WIoU_Scale(iou=1 - iou,
+                                  batch_size=WIoUDict['batch_size'],
+                                  epoch=WIoUDict['epoch'],
+                                  delta=WIoUDict['delta'],
+                                  gamma=WIoUDict['gamma'])
+                wiou_1 = (1 - iou) * torch.exp(rho2 / c2.detach())
+                return getattr(WIoU_Scale, '_scaled_loss')(self), wiou_1, iou
+
             return iou - rho2 / c2  # DIoU
         c_area = cw * ch + eps  # convex area
         return iou - (c_area - union) / c_area  # GIoU https://arxiv.org/pdf/1902.09630.pdf
+
     return iou  # IoU
 
 

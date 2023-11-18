@@ -212,7 +212,8 @@ class BaseModel(nn.Module):
         if verbose:
             LOGGER.info(f'Transferred {len(csd)}/{len(self.model.state_dict())} items from pretrained weights')
 
-    def loss(self, batch, preds=None):
+    # def loss(self, batch, preds=None):
+    def loss(self, batch, preds=None, epoch=0):
         """
         Compute loss
 
@@ -224,6 +225,9 @@ class BaseModel(nn.Module):
             self.criterion = self.init_criterion()
 
         preds = self.forward(batch['img']) if preds is None else preds
+        # return self.criterion(preds, batch)
+        if isinstance(self.criterion, v8DetectionLoss):
+            self.criterion.update_epoch(epoch=epoch)
         return self.criterion(preds, batch)
 
     def init_criterion(self):
@@ -232,6 +236,7 @@ class BaseModel(nn.Module):
 
 class DetectionModel(BaseModel):
     """YOLOv8 detection model."""
+
 
     def __init__(self, cfg='yolov8n.yaml', ch=3, nc=None, verbose=True):  # model, input channels, number of classes
         super().__init__()
