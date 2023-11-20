@@ -83,11 +83,19 @@ class TaskAlignedAssigner(nn.Module):
         self.beta = beta
         self.eps = eps
         self.WIoU = False
+        self.EIoU = False
 
-    def setWIoU(self, WIoUDict):
+    def set_wiou(self, WIoUDict):
         self.WIoUDict = WIoUDict
         self.WIoU = True
+        self.EIoU = False
 
+    def update_epoch(self, epoch):
+        self.WIoUDict['epoch'] = epoch
+
+    def set_eiou(self):
+        self.WIoU = False
+        self.EIoU = True
 
     @torch.no_grad()
     def forward(self, pd_scores, pd_bboxes, anc_points, gt_labels, gt_bboxes, mask_gt):
@@ -169,6 +177,8 @@ class TaskAlignedAssigner(nn.Module):
         # overlaps[mask_gt] = bbox_iou(gt_boxes, pd_boxes, xywh=False, CIoU=True).squeeze(-1).clamp_(0)
         if self.WIoU:
             overlaps[mask_gt] = bbox_iou(gt_boxes, pd_boxes, xywh=False, CIoU=False, WIoU=self.WIoU, WIoUDict=self.WIoUDict)[2].squeeze(-1).clamp_(0)
+        elif self.EIoU:
+            overlaps[mask_gt] = bbox_iou(gt_boxes, pd_boxes, xywh=False, EIoU=True).squeeze(-1).clamp_(0)
         else:
             overlaps[mask_gt] = bbox_iou(gt_boxes, pd_boxes, xywh=False, CIoU=True).squeeze(-1).clamp_(0)
 

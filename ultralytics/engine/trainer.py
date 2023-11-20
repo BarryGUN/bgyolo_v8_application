@@ -215,6 +215,15 @@ class BaseTrainer:
         self.run_callbacks('on_pretrain_routine_start')
         ckpt = self.setup_model()
         self.model = self.model.to(self.device)
+
+        # optional Loss
+        if self.args.task is 'detect':
+            if self.args.wiou == self.args.eiou == True:
+                self.args.wiou = True if not self.args.eiou else False
+                LOGGER.warn(f"WARNING ⚠ WIoU and EIoU only one could be use, EIoU is chosen")
+            LOGGER.info(f"{colorstr('WIoULoss')}: {self.args.wiou}")
+            LOGGER.info(f"{colorstr('EIoULoss')}: {self.args.eiou}")
+
         self.set_model_attributes()
 
         # Freeze layers
@@ -284,10 +293,6 @@ class BaseTrainer:
         self.stopper, self.stop = EarlyStopping(patience=self.args.patience), False
         self.resume_training(ckpt)
         self.scheduler.last_epoch = self.start_epoch - 1  # do not move
-
-        # optional Loss
-        if self.args.task is 'detect':
-            LOGGER.info(f"{colorstr('WIoULoss')}: {self.args.wiou}")
 
         self.run_callbacks('on_pretrain_routine_end')
 

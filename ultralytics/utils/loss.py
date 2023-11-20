@@ -56,18 +56,20 @@ class FocalLoss(nn.Module):
 
 class BboxLoss(nn.Module):
 
-    def __init__(self, reg_max, use_dfl=False, WIoU=False, batch_size=2, gamma=1.9, delta=3):
+    def __init__(self, reg_max, use_dfl=False, EIoU=False, WIoU=False, batch_size=2, gamma=1.9, delta=3):
         """Initialize the BboxLoss module with regularization maximum and DFL settings."""
         super().__init__()
         self.reg_max = reg_max
         self.use_dfl = use_dfl
         self.WIoU = WIoU
+        self.EIoU = EIoU
         if WIoU:
             self.WIoUDict = {
                 'batch_size': batch_size,
                 'gamma' : gamma,
                 'delta': delta
             }
+            self.EIoU = False
 
     def forward(self, pred_dist,
                 pred_bboxes,
@@ -76,7 +78,7 @@ class BboxLoss(nn.Module):
                 target_scores,
                 target_scores_sum,
                 fg_mask,
-                epoch):
+                epoch=0):
         """IoU loss."""
         weight = target_scores.sum(-1)[fg_mask].unsqueeze(-1)
         # iou = bbox_iou(pred_bboxes[fg_mask], target_bboxes[fg_mask], xywh=False, CIoU=True)
@@ -86,6 +88,9 @@ class BboxLoss(nn.Module):
             self.WIoUDict['epoch'] = epoch
             iou = bbox_iou(pred_bboxes[fg_mask], target_bboxes[fg_mask], xywh=False, CIoU=False, WIoU=True, WIoUDict=self.WIoUDict)
             loss_iou = (iou[0] * iou[1] * weight).sum() / target_scores_sum
+        elif self.EIoU:
+            iou = bbox_iou(pred_bboxes[fg_mask], target_bboxes[fg_mask], xywh=False, EIoU=True)
+            loss_iou = ((1.0 - iou) * weight).sum() / target_scores_sum
         else:
             iou = bbox_iou(pred_bboxes[fg_mask], target_bboxes[fg_mask], xywh=False, CIoU=True)
             loss_iou = ((1.0 - iou) * weight).sum() / target_scores_sum
@@ -150,13 +155,19 @@ class v8DetectionLoss:
         if self.hyp.wiou:
             self.bbox_loss = BboxLoss(m.reg_max - 1,
                                       use_dfl=self.use_dfl,
-                                      WIoU=self.hyp.wiou,
+                                      WIoU=True,
                                       gamma=self.hyp.gamma,
                                       delta=self.hyp.delta,
                                       batch_size=self.hyp.batch).to(device)
-
+            self.assigner.set_wiou(self.bbox_loss.WIoUDict)
+        elif self.hyp.eiou:
+            self.bbox_loss = BboxLoss(m.reg_max - 1,
+                                      use_dfl=self.use_dfl,
+                                      EIoU=True)
+            self.assigner.set_eiou()
         else:
-            self.bbox_loss = BboxLoss(m.reg_max - 1, use_dfl=self.use_dfl)
+            self.bbox_loss = BboxLoss(m.reg_max - 1,
+                                      use_dfl=self.use_dfl)
         self.proj = torch.arange(m.reg_max, dtype=torch.float, device=device)
 
     def preprocess(self, targets, batch_size, scale_tensor):
@@ -212,8 +223,8 @@ class v8DetectionLoss:
         # pboxes
         pred_bboxes = self.bbox_decode(anchor_points, pred_distri)  # xyxy, (b, h*w, 4)
         if self.hyp.wiou:
-            self.bbox_loss.WIoUDict['epoch'] = self.epoch
-            self.assigner.setWIoU(self.bbox_loss.WIoUDict)
+            self.assigner.update_epoch(self.epoch)
+
         _, target_bboxes, target_scores, fg_mask, _ = self.assigner(
             pred_scores.detach().sigmoid(), (pred_bboxes.detach() * stride_tensor).type(gt_bboxes.dtype),
             anchor_points * stride_tensor, gt_labels, gt_bboxes, mask_gt)
@@ -227,8 +238,12 @@ class v8DetectionLoss:
         # bbox loss
         if fg_mask.sum():
             target_bboxes /= stride_tensor
-            loss[0], loss[2] = self.bbox_loss(pred_distri, pred_bboxes, anchor_points, target_bboxes, target_scores,
+            if self.hyp.wiou:
+                loss[0], loss[2] = self.bbox_loss(pred_distri, pred_bboxes, anchor_points, target_bboxes, target_scores,
                                               target_scores_sum, fg_mask, epoch=self.epoch)
+            else:
+                loss[0], loss[2] = self.bbox_loss(pred_distri, pred_bboxes, anchor_points, target_bboxes, target_scores,
+                                                  target_scores_sum, fg_mask)
 
         loss[0] *= self.hyp.box  # box gain
         loss[1] *= self.hyp.cls  # cls gain
