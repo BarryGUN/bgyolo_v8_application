@@ -223,9 +223,9 @@ class BaseTrainer:
                     self.args.wiou = False
                     LOGGER.warn(f"WARNING ⚠ WIoU and EIoU only one could be use, EIoU is chosen")
 
-                # if self.args.alpha_regx:
-                #     self.args.alpha_regx = False
-                #     LOGGER.warn(f"WARNING ⚠ WIoU does not support alpha regx, alpha regx turned off")
+                if self.args.alpha_regx:
+                    self.args.alpha_regx = False
+                    LOGGER.warn(f"WARNING ⚠ WIoU does not support alpha regx, alpha regx turned off")
 
 
             LOGGER.info(f"{colorstr('WIoULoss')}: {self.args.wiou}")
