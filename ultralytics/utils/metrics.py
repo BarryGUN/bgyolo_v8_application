@@ -101,12 +101,14 @@ def box_iou(box1, box2, eps=1e-7):
 def bbox_iou(box1,
              box2,
              xywh=True,
+             alphaIoU=False,
              GIoU=False,
              DIoU=False,
              CIoU=False,
              WIoU=False,
              EIoU=False,
              eps=1e-7,
+             alpha_value=3,
              WIoUDict={}):
     """
     Calculate Intersection over Union (IoU) of box1(1, 4) to box2(n, 4).
@@ -162,29 +164,33 @@ def bbox_iou(box1,
     #     return iou - (c_area - union) / c_area  # GIoU https://arxiv.org/pdf/1902.09630.pdf
 
     # IoU
-    iou = inter / union
+    iou = torch.pow(inter / union + eps, alpha_value) if alphaIoU else inter / union
 
     if CIoU or DIoU or GIoU or WIoU:
         cw = b1_x2.maximum(b2_x2) - b1_x1.minimum(b2_x1)  # convex (smallest enclosing box) width
         ch = b1_y2.maximum(b2_y2) - b1_y1.minimum(b2_y1)  # convex height
         if CIoU or DIoU or WIoU:  # Distance or Complete IoU https://arxiv.org/abs/1911.08287v1
-            c2 = cw ** 2 + ch ** 2 + eps  # convex diagonal squared
-            rho2 = ((b2_x1 + b2_x2 - b1_x1 - b1_x2) ** 2 + (b2_y1 + b2_y2 - b1_y1 - b1_y2) ** 2) / 4  # center dist ** 2
+            c2 = (cw ** 2 + ch ** 2) ** alpha_value + eps if alphaIoU else cw ** 2 + ch ** 2 + eps  # convex diagonal squared
+            rho2 = (((b2_x1 + b2_x2 - b1_x1 - b1_x2) ** 2 + (
+                        b2_y1 + b2_y2 - b1_y1 - b1_y2) ** 2) / 4) ** alpha_value if alphaIoU else ((b2_x1 + b2_x2 - b1_x1 - b1_x2) ** 2 + (
+                                                                                                   b2_y1 + b2_y2 - b1_y1 - b1_y2) ** 2) / 4  # center dist ** 2
 
             if CIoU:  # https://github.com/Zzh-tju/DIoU-SSD-pytorch/blob/master/utils/box/box_utils.py#L47
                 v = (4 / math.pi ** 2) * (torch.atan(w2 / h2) - torch.atan(w1 / h1)).pow(2)
                 with torch.no_grad():
-                    alpha = v / (v - iou + (1 + eps))
-                return iou - (rho2 / c2 + v * alpha)  # CIoU
+                    alpha = v / ((1 + eps) - inter / union + v) if alphaIoU else v / (v - iou + (1 + eps))
+                return iou - (rho2 / c2 + torch.pow(v * alpha + eps, alpha_value))if alphaIoU else iou - (rho2 / c2 + v * alpha)  # CIoU
 
             if EIoU:
-                rho_w2 = ((b2_x2 - b2_x1) - (b1_x2 - b1_x1)) ** 2
-                rho_h2 = ((b2_y2 - b2_y1) - (b1_y2 - b1_y1)) ** 2
-                cw2 = cw ** 2 + eps
-                ch2 = ch ** 2 + eps
+                rho_w2 = ((b2_x2 - b2_x1) - (b1_x2 - b1_x1)) ** (alpha_value * 2) if alphaIoU else ((b2_x2 - b2_x1) - (b1_x2 - b1_x1)) ** 2
+                rho_h2 = ((b2_y2 - b2_y1) - (b1_y2 - b1_y1)) ** (alpha_value * 2) if alphaIoU else ((b2_y2 - b2_y1) - (b1_y2 - b1_y1)) ** 2
+                cw2 = cw ** (2 * alpha_value) + eps if alphaIoU else cw ** 2 + eps
+                ch2 = ch ** (2 * alpha_value) + eps if alphaIoU else ch ** 2 + eps
                 return iou - (rho2 / c2 + rho_w2 / cw2 + rho_h2 / ch2)
 
             if WIoU:
+                if alphaIoU:
+                    raise NotImplementedError('WIoU do not support alpha power')
                 self = WIoU_Scale(iou=1 - iou,
                                   batch_size=WIoUDict['batch_size'],
                                   epoch=WIoUDict['epoch'],

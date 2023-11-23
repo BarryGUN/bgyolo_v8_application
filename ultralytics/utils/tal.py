@@ -73,7 +73,13 @@ class TaskAlignedAssigner(nn.Module):
         eps (float): A small value to prevent division by zero.
     """
 
-    def __init__(self, topk=13, num_classes=80, alpha=1.0, beta=6.0, eps=1e-9):
+    def __init__(self, topk=13,
+                 num_classes=80,
+                 alpha=1.0,
+                 beta=6.0,
+                 eps=1e-9,
+                 alpha_power=False,
+                 alpha_power_value=3):
         """Initialize a TaskAlignedAssigner object with customizable hyperparameters."""
         super().__init__()
         self.topk = topk
@@ -84,6 +90,9 @@ class TaskAlignedAssigner(nn.Module):
         self.eps = eps
         self.WIoU = False
         self.EIoU = False
+        self.alpha_power = alpha_power
+        self.alpha_power_value = alpha_power_value
+
 
     def set_wiou(self, WIoUDict):
         self.WIoUDict = WIoUDict
@@ -176,11 +185,28 @@ class TaskAlignedAssigner(nn.Module):
         gt_boxes = gt_bboxes.unsqueeze(2).expand(-1, -1, na, -1)[mask_gt]
         # overlaps[mask_gt] = bbox_iou(gt_boxes, pd_boxes, xywh=False, CIoU=True).squeeze(-1).clamp_(0)
         if self.WIoU:
-            overlaps[mask_gt] = bbox_iou(gt_boxes, pd_boxes, xywh=False, CIoU=False, WIoU=self.WIoU, WIoUDict=self.WIoUDict)[2].squeeze(-1).clamp_(0)
+            overlaps[mask_gt] = bbox_iou(gt_boxes,
+                                         pd_boxes,
+                                         xywh=False,
+                                         CIoU=False,
+                                         WIoU=self.WIoU,
+                                         WIoUDict=self.WIoUDict)[2].squeeze(-1).clamp_(0)
         elif self.EIoU:
-            overlaps[mask_gt] = bbox_iou(gt_boxes, pd_boxes, xywh=False, EIoU=True).squeeze(-1).clamp_(0)
+            overlaps[mask_gt] = bbox_iou(gt_boxes,
+                                         pd_boxes,
+                                         xywh=False,
+                                         EIoU=True,
+                                         alphaIoU=self.alpha_power,
+                                         alpha_value=self.alpha_power_value
+                                         ).squeeze(-1).clamp_(0)
         else:
-            overlaps[mask_gt] = bbox_iou(gt_boxes, pd_boxes, xywh=False, CIoU=True).squeeze(-1).clamp_(0)
+            overlaps[mask_gt] = bbox_iou(gt_boxes,
+                                         pd_boxes,
+                                         xywh=False,
+                                         CIoU=True,
+                                         alphaIoU=self.alpha_power,
+                                         alpha_value=self.alpha_power_value
+                                         ).squeeze(-1).clamp_(0)
 
         align_metric = bbox_scores.pow(self.alpha) * overlaps.pow(self.beta)
         return align_metric, overlaps

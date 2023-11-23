@@ -218,11 +218,19 @@ class BaseTrainer:
 
         # optional Loss
         if self.args.task is 'detect':
-            if self.args.wiou == self.args.eiou == True:
-                self.args.wiou = True if not self.args.eiou else False
-                LOGGER.warn(f"WARNING ⚠ WIoU and EIoU only one could be use, EIoU is chosen")
+            if self.args.wiou:
+                if self.args.wiou == self.args.eiou:
+                    self.args.wiou = False
+                    LOGGER.warn(f"WARNING ⚠ WIoU and EIoU only one could be use, EIoU is chosen")
+
+                # if self.args.alpha_regx:
+                #     self.args.alpha_regx = False
+                #     LOGGER.warn(f"WARNING ⚠ WIoU does not support alpha regx, alpha regx turned off")
+
+
             LOGGER.info(f"{colorstr('WIoULoss')}: {self.args.wiou}")
             LOGGER.info(f"{colorstr('EIoULoss')}: {self.args.eiou}")
+            LOGGER.info(f"{colorstr('alphaIoURegx')}: {self.args.alpha_regx}")
 
         self.set_model_attributes()
 

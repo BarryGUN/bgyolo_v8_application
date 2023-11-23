@@ -33,8 +33,9 @@ amp: True  # (bool) Automatic Mixed Precision (AMP) training, choices=[True, Fal
 fraction: 1.0  # (float) dataset fraction to train on (default is 1.0, all images in train set)
 profile: False  # (bool) profile ONNX and TensorRT speeds during training for loggers
 freeze: None  # (int | list, optional) freeze first n layers, or freeze list of layer indices during training
-wiou: False # use wiou BboxLoss (detect train only)
-eiou: True # use eiou BboxLoss (detect train only)
+wiou: False # (bool) use wiou BboxLoss (detect train only)
+eiou: True # (bool) use eiou BboxLoss (detect train only)
+alpha_regx: False # (bool) user alpha regx for iou
 # Segmentation
 overlap_mask: True  # (bool) masks should overlap during training (segment train only)
 mask_ratio: 4  # (int) mask downsample ratio (segment train only)
@@ -95,6 +96,7 @@ cls: 0.5  # (float) cls loss gain (scale with pixels)
 dfl: 1.5  # (float) dfl loss gain
 delta: 3 # (float) wiou delta
 gamma: 1.9 # (float) wiou beta
+alpha: 3 # (float) alpha for alpha regex
 pose: 12.0  # (float) pose loss gain
 kobj: 1.0  # (float) keypoint obj loss gain
 label_smoothing: 0.0  # (float) label smoothing (fraction)

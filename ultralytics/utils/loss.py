@@ -56,7 +56,14 @@ class FocalLoss(nn.Module):
 
 class BboxLoss(nn.Module):
 
-    def __init__(self, reg_max, use_dfl=False, EIoU=False, WIoU=False, batch_size=2, gamma=1.9, delta=3):
+    def __init__(self, reg_max, use_dfl=False,
+                 EIoU=False,
+                 WIoU=False,
+                 alphaIoU=True,
+                 batch_size=2,
+                 gamma=1.9,
+                 delta=3,
+                 alpha=3):
         """Initialize the BboxLoss module with regularization maximum and DFL settings."""
         super().__init__()
         self.reg_max = reg_max
@@ -70,6 +77,8 @@ class BboxLoss(nn.Module):
                 'delta': delta
             }
             self.EIoU = False
+        self.alpha = alpha
+        self.alphaIoU = alphaIoU
 
     def forward(self, pred_dist,
                 pred_bboxes,
@@ -86,13 +95,32 @@ class BboxLoss(nn.Module):
 
         if self.WIoU:
             self.WIoUDict['epoch'] = epoch
-            iou = bbox_iou(pred_bboxes[fg_mask], target_bboxes[fg_mask], xywh=False, CIoU=False, WIoU=True, WIoUDict=self.WIoUDict)
+            iou = bbox_iou(pred_bboxes[fg_mask],
+                           target_bboxes[fg_mask],
+                           xywh=False,
+                           CIoU=False,
+                           WIoU=True,
+                           WIoUDict=self.WIoUDict,
+                           alphaIoU=self.alphaIoU,
+                           alpha_value=self.alpha)
             loss_iou = (iou[0] * iou[1] * weight).sum() / target_scores_sum
         elif self.EIoU:
-            iou = bbox_iou(pred_bboxes[fg_mask], target_bboxes[fg_mask], xywh=False, EIoU=True)
+            iou = bbox_iou(pred_bboxes[fg_mask],
+                           target_bboxes[fg_mask],
+                           xywh=False,
+                           EIoU=True,
+                           alphaIoU=self.alphaIoU,
+                           alpha_value=self.alpha
+                           )
             loss_iou = ((1.0 - iou) * weight).sum() / target_scores_sum
         else:
-            iou = bbox_iou(pred_bboxes[fg_mask], target_bboxes[fg_mask], xywh=False, CIoU=True)
+            iou = bbox_iou(pred_bboxes[fg_mask],
+                           target_bboxes[fg_mask],
+                           xywh=False,
+                           CIoU=True,
+                           alphaIoU=self.alphaIoU,
+                           alpha_value=self.alpha
+                           )
             loss_iou = ((1.0 - iou) * weight).sum() / target_scores_sum
 
         # DFL loss
@@ -151,23 +179,38 @@ class v8DetectionLoss:
         self.device = device
         self.epoch = 0
         self.use_dfl = m.reg_max > 1
-        self.assigner = TaskAlignedAssigner(topk=10, num_classes=self.nc, alpha=0.5, beta=6.0)
+        self.assigner = TaskAlignedAssigner(topk=10,
+                                            num_classes=self.nc,
+                                            alpha=0.5,
+                                            beta=6.0,
+                                            alpha_power=self.hyp.alpha_regx,
+                                            alpha_power_value=self.hyp.alpha)
         if self.hyp.wiou:
             self.bbox_loss = BboxLoss(m.reg_max - 1,
                                       use_dfl=self.use_dfl,
                                       WIoU=True,
                                       gamma=self.hyp.gamma,
                                       delta=self.hyp.delta,
-                                      batch_size=self.hyp.batch).to(device)
+                                      batch_size=self.hyp.batch,
+                                      alphaIoU=self.hyp.alpha_regx,
+                                      alpha=self.hyp.alpha
+
+                                      ).to(device)
             self.assigner.set_wiou(self.bbox_loss.WIoUDict)
         elif self.hyp.eiou:
             self.bbox_loss = BboxLoss(m.reg_max - 1,
                                       use_dfl=self.use_dfl,
-                                      EIoU=True)
+                                      EIoU=True,
+                                      alphaIoU=self.hyp.alpha_regx,
+                                      alpha=self.hyp.alpha
+                                      )
             self.assigner.set_eiou()
         else:
             self.bbox_loss = BboxLoss(m.reg_max - 1,
-                                      use_dfl=self.use_dfl)
+                                      use_dfl=self.use_dfl,
+                                      alphaIoU=self.hyp.alpha_regx,
+                                      alpha=self.hyp.alpha
+                                      )
         self.proj = torch.arange(m.reg_max, dtype=torch.float, device=device)
 
     def preprocess(self, targets, batch_size, scale_tensor):
