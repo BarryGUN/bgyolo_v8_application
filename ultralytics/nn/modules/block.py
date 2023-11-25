@@ -711,7 +711,7 @@ class C2fBi(nn.Module):
         self.cv1 = Conv(c1, 2 * self.c, 1, 1)
         self.cv2 = Conv((2 + n) * self.c, c2, 1)  # optional act=FReLU(c2)
         self.m = nn.ModuleList(Bottleneck(self.c, self.c, shortcut, g, k=((3, 3), (3, 3)), e=1.0) for _ in range(n))
-        self.bcat = BibnConcat((2 + n), dimension=1)
+        self.bcat = BibnConcat((2 + n), out=(2 + n) * self.c, dimension=1)
 
     def forward(self, x):
         """Forward pass through C2f layer."""
