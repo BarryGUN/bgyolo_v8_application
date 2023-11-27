@@ -665,7 +665,7 @@ def parse_model(d, ch, verbose=True):  # model_dict, input_channels(3)
         if m in (Classify, Conv, ConvTranspose, GhostConv, Bottleneck, GhostBottleneck, SPP, SPPF, SPPFCSP, DWConv, Focus,
                  BottleneckCSP, C1, C2, C2f, C3, C3TR, C3Ghost, nn.ConvTranspose2d, DWConvTranspose2d, C3x, RepC3,
                  MS2, MS2b, C2RepX, SplitMP, MS2d, MS2e, C2RepXCCAB, C2RepXCBCBA, C2d, C2sc, C2RepXc, BiFuse, C2fBi,
-                 C2x):
+                 C2x, RepConv):
             if m is BiFuse:
                 c_list = list(ch[i] for i in f)
                 c1, c2 = c_list, args[0]
