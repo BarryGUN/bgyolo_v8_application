@@ -56,9 +56,9 @@ class FocalLoss(nn.Module):
 
 class BboxLoss(nn.Module):
 
-    def __init__(self, reg_max, use_dfl=False,
-                 # EIoU=False,
-                 # WIoU=False,
+    def __init__(self, reg_max,
+                 use_dfl=False,
+                 EIoU=False,
                  # alphaIoU=True,
                  # batch_size=2,
                  # gamma=1.9,
@@ -69,15 +69,7 @@ class BboxLoss(nn.Module):
         super().__init__()
         self.reg_max = reg_max
         self.use_dfl = use_dfl
-        # self.WIoU = WIoU
-        # self.EIoU = EIoU
-        # if WIoU:
-        #     self.WIoUDict = {
-        #         'batch_size': batch_size,
-        #         'gamma' : gamma,
-        #         'delta': delta
-        #     }
-        #     self.EIoU = False
+        self.EIoU = EIoU
         # self.alpha = alpha
         # self.alphaIoU = alphaIoU
 
@@ -94,34 +86,16 @@ class BboxLoss(nn.Module):
         weight = target_scores.sum(-1)[fg_mask].unsqueeze(-1)
         # iou = bbox_iou(pred_bboxes[fg_mask], target_bboxes[fg_mask], xywh=False, CIoU=True)
 
-
-        # if self.WIoU:
-        #     self.WIoUDict['epoch'] = epoch
-        #     iou = bbox_iou(pred_bboxes[fg_mask],
-        #                    target_bboxes[fg_mask],
-        #                    xywh=False,
-        #                    CIoU=False,
-        #                    WIoU=True,
-        #                    WIoUDict=self.WIoUDict,
-        #                    alphaIoU=self.alphaIoU,
-        #                    alpha_value=self.alpha)
-        #     loss_iou = (iou[0] * iou[1] * weight).sum() / target_scores_sum
-        # if self.EIoU:
-        #     iou = bbox_iou(pred_bboxes[fg_mask],
-        #                    target_bboxes[fg_mask],
-        #                    xywh=False,
-        #                    EIoU=True,
-        #                    alphaIoU=self.alphaIoU,
-        #                    alpha_value=self.alpha
-        #                    )
-        # else:
-        iou = bbox_iou(pred_bboxes[fg_mask],
-                       target_bboxes[fg_mask],
-                       xywh=False,
-                       CIoU=True,
-                       # alphaIoU=self.alphaIoU,
-                       # alpha_value=self.alpha
-                       )
+        if self.EIoU:
+            iou = bbox_iou(pred_bboxes[fg_mask],
+                           target_bboxes[fg_mask],
+                           xywh=False,
+                           EIoU=True)
+        else:
+            iou = bbox_iou(pred_bboxes[fg_mask],
+                           target_bboxes[fg_mask],
+                           xywh=False,
+                           CIoU=True)
         loss_iou = ((1.0 - iou) * weight).sum() / target_scores_sum
 
         # DFL loss
@@ -181,8 +155,13 @@ class v8DetectionLoss:
 
         self.use_dfl = m.reg_max > 1
 
+
+        if self.hyp.eiou:
+             self.bbox_loss = BboxLoss(m.reg_max - 1, use_dfl=self.use_dfl, EIoU=True).to(device)
+        else:
+            self.bbox_loss = BboxLoss(m.reg_max - 1, use_dfl=self.use_dfl).to(device)
         self.assigner = TaskAlignedAssigner(topk=10, num_classes=self.nc, alpha=0.5, beta=6.0)
-        self.bbox_loss = BboxLoss(m.reg_max - 1, use_dfl=self.use_dfl).to(device)
+
         self.proj = torch.arange(m.reg_max, dtype=torch.float, device=device)
 
     def preprocess(self, targets, batch_size, scale_tensor):
