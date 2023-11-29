@@ -197,20 +197,20 @@ class v8DetectionLoss:
         #
         #                               ).to(device)
         #     self.assigner.set_wiou(self.bbox_loss.WIoUDict)
-        if self.hyp.eiou:
-            self.bbox_loss = BboxLoss(m.reg_max - 1,
-                                      use_dfl=self.use_dfl,
-                                      EIoU=True,
-                                      alphaIoU=self.hyp.alpha_regx,
-                                      alpha=self.hyp.alpha
-                                      )
-            self.assigner.set_eiou()
-        else:
-            self.bbox_loss = BboxLoss(m.reg_max - 1,
-                                      use_dfl=self.use_dfl,
-                                      alphaIoU=self.hyp.alpha_regx,
-                                      alpha=self.hyp.alpha
-                                      )
+        # if self.hyp.eiou:
+        #     self.bbox_loss = BboxLoss(m.reg_max - 1,
+        #                               use_dfl=self.use_dfl,
+        #                               EIoU=True,
+        #                               alphaIoU=self.hyp.alpha_regx,
+        #                               alpha=self.hyp.alpha
+        #                               )
+        #     self.assigner.set_eiou()
+        # else:
+        self.bbox_loss = BboxLoss(m.reg_max - 1,
+                                  use_dfl=self.use_dfl,
+                                  alphaIoU=self.hyp.alpha_regx,
+                                  alpha=self.hyp.alpha
+                                  )
         self.proj = torch.arange(m.reg_max, dtype=torch.float, device=device)
 
     def preprocess(self, targets, batch_size, scale_tensor):

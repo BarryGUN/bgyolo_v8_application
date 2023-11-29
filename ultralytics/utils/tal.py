@@ -191,22 +191,22 @@ class TaskAlignedAssigner(nn.Module):
         #                                  CIoU=False,
         #                                  WIoU=self.WIoU,
         #                                  WIoUDict=self.WIoUDict)[2].squeeze(-1).clamp_(0)
-        if self.EIoU:
-            overlaps[mask_gt] = bbox_iou(gt_boxes,
-                                         pd_boxes,
-                                         xywh=False,
-                                         EIoU=True,
-                                         alphaIoU=self.alpha_power,
-                                         alpha_value=self.alpha_power_value
-                                         ).squeeze(-1).clamp_(0)
-        else:
-            overlaps[mask_gt] = bbox_iou(gt_boxes,
-                                         pd_boxes,
-                                         xywh=False,
-                                         CIoU=True,
-                                         alphaIoU=self.alpha_power,
-                                         alpha_value=self.alpha_power_value
-                                         ).squeeze(-1).clamp_(0)
+        # if self.EIoU:
+        #     overlaps[mask_gt] = bbox_iou(gt_boxes,
+        #                                  pd_boxes,
+        #                                  xywh=False,
+        #                                  EIoU=True,
+        #                                  alphaIoU=self.alpha_power,
+        #                                  alpha_value=self.alpha_power_value
+        #                                  ).squeeze(-1).clamp_(0)
+        # else:
+        overlaps[mask_gt] = bbox_iou(gt_boxes,
+                                     pd_boxes,
+                                     xywh=False,
+                                     CIoU=True,
+                                     alphaIoU=self.alpha_power,
+                                     alpha_value=self.alpha_power_value
+                                     ).squeeze(-1).clamp_(0)
 
         align_metric = bbox_scores.pow(self.alpha) * overlaps.pow(self.beta)
         return align_metric, overlaps
