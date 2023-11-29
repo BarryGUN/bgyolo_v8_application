@@ -105,11 +105,12 @@ def bbox_iou(box1,
              GIoU=False,
              DIoU=False,
              CIoU=False,
-             WIoU=False,
+             # WIoU=False,
              EIoU=False,
              eps=1e-7,
              alpha_value=3,
-             WIoUDict={}):
+             # WIoUDict={}
+             ):
     """
     Calculate Intersection over Union (IoU) of box1(1, 4) to box2(n, 4).
 

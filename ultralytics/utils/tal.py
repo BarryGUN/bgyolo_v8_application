@@ -88,22 +88,22 @@ class TaskAlignedAssigner(nn.Module):
         self.alpha = alpha
         self.beta = beta
         self.eps = eps
-        self.WIoU = False
+        # self.WIoU = False
         self.EIoU = False
         self.alpha_power = alpha_power
         self.alpha_power_value = alpha_power_value
 
 
-    def set_wiou(self, WIoUDict):
-        self.WIoUDict = WIoUDict
-        self.WIoU = True
-        self.EIoU = False
+    # def set_wiou(self, WIoUDict):
+    #     self.WIoUDict = WIoUDict
+    #     self.WIoU = True
+    #     self.EIoU = False
 
-    def update_epoch(self, epoch):
-        self.WIoUDict['epoch'] = epoch
+    # def update_epoch(self, epoch):
+    #     self.WIoUDict['epoch'] = epoch
 
     def set_eiou(self):
-        self.WIoU = False
+        # self.WIoU = False
         self.EIoU = True
 
     @torch.no_grad()
@@ -184,14 +184,14 @@ class TaskAlignedAssigner(nn.Module):
         pd_boxes = pd_bboxes.unsqueeze(1).expand(-1, self.n_max_boxes, -1, -1)[mask_gt]
         gt_boxes = gt_bboxes.unsqueeze(2).expand(-1, -1, na, -1)[mask_gt]
         # overlaps[mask_gt] = bbox_iou(gt_boxes, pd_boxes, xywh=False, CIoU=True).squeeze(-1).clamp_(0)
-        if self.WIoU:
-            overlaps[mask_gt] = bbox_iou(gt_boxes,
-                                         pd_boxes,
-                                         xywh=False,
-                                         CIoU=False,
-                                         WIoU=self.WIoU,
-                                         WIoUDict=self.WIoUDict)[2].squeeze(-1).clamp_(0)
-        elif self.EIoU:
+        # if self.WIoU:
+        #     overlaps[mask_gt] = bbox_iou(gt_boxes,
+        #                                  pd_boxes,
+        #                                  xywh=False,
+        #                                  CIoU=False,
+        #                                  WIoU=self.WIoU,
+        #                                  WIoUDict=self.WIoUDict)[2].squeeze(-1).clamp_(0)
+        if self.EIoU:
             overlaps[mask_gt] = bbox_iou(gt_boxes,
                                          pd_boxes,
                                          xywh=False,

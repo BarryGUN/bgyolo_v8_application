@@ -225,10 +225,10 @@ class BaseModel(nn.Module):
             self.criterion = self.init_criterion()
 
         preds = self.forward(batch['img']) if preds is None else preds
-        # return self.criterion(preds, batch)
-        if isinstance(self.criterion, v8DetectionLoss):
-            self.criterion.update_epoch(epoch=epoch)
         return self.criterion(preds, batch)
+        # if isinstance(self.criterion, v8DetectionLoss):
+        #     self.criterion.update_epoch(epoch=epoch)
+        # return self.criterion(preds, batch)
 
     def init_criterion(self):
         raise NotImplementedError('compute_loss() needs to be implemented by task heads')

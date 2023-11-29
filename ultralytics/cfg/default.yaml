@@ -33,7 +33,7 @@ amp: True  # (bool) Automatic Mixed Precision (AMP) training, choices=[True, Fal
 fraction: 1.0  # (float) dataset fraction to train on (default is 1.0, all images in train set)
 profile: False  # (bool) profile ONNX and TensorRT speeds during training for loggers
 freeze: None  # (int | list, optional) freeze first n layers, or freeze list of layer indices during training
-wiou: False # (bool) use wiou BboxLoss (detect train only)
+#wiou: False # (bool) use wiou BboxLoss (detect train only)
 eiou: True # (bool) use eiou BboxLoss (detect train only)
 alpha_regx: False # (bool) user alpha regx for iou
 # Segmentation
