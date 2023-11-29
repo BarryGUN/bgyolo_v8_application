@@ -265,8 +265,8 @@ class v8DetectionLoss:
 
         # pboxes
         pred_bboxes = self.bbox_decode(anchor_points, pred_distri)  # xyxy, (b, h*w, 4)
-        if self.hyp.wiou:
-            self.assigner.update_epoch(self.epoch)
+        # if self.hyp.wiou:
+        #     self.assigner.update_epoch(self.epoch)
 
         _, target_bboxes, target_scores, fg_mask, _ = self.assigner(
             pred_scores.detach().sigmoid(), (pred_bboxes.detach() * stride_tensor).type(gt_bboxes.dtype),

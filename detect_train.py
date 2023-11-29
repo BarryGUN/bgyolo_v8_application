@@ -24,7 +24,7 @@ if __name__ == '__main__':
                 resume=True,
                 seed=0,
                 deterministic=True,
-                wiou=True,
+                # wiou=True,
                 eiou=False,
                 alpha_regx=True,
                 patience=100
