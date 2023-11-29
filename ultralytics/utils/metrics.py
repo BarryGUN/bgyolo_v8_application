@@ -170,22 +170,31 @@ def bbox_iou(box1,
         cw = b1_x2.maximum(b2_x2) - b1_x1.minimum(b2_x1)  # convex (smallest enclosing box) width
         ch = b1_y2.maximum(b2_y2) - b1_y1.minimum(b2_y1)  # convex height
         if CIoU or DIoU or WIoU or EIoU:  # Distance or Complete IoU https://arxiv.org/abs/1911.08287v1
-            c2 = (cw ** 2 + ch ** 2) ** alpha_value + eps if alphaIoU else cw ** 2 + ch ** 2 + eps  # convex diagonal squared
-            rho2 = (((b2_x1 + b2_x2 - b1_x1 - b1_x2) ** 2 + (
-                        b2_y1 + b2_y2 - b1_y1 - b1_y2) ** 2) / 4) ** alpha_value if alphaIoU else ((b2_x1 + b2_x2 - b1_x1 - b1_x2) ** 2 + (
-                                                                                                   b2_y1 + b2_y2 - b1_y1 - b1_y2) ** 2) / 4  # center dist ** 2
+            if alphaIoU:
+                c2 = (cw ** 2 + ch ** 2) ** alpha_value + eps
+            else:
+                c2 = cw ** 2 + ch ** 2 + eps  # convex diagonal squared
+            if alphaIoU:
+                rho2 = (((b2_x1 + b2_x2 - b1_x1 - b1_x2) ** 2 + (b2_y1 + b2_y2 - b1_y1 - b1_y2) ** 2) / 4) ** alpha_value
+            else:
+                rho2 = ((b2_x1 + b2_x2 - b1_x1 - b1_x2) ** 2 + (b2_y1 + b2_y2 - b1_y1 - b1_y2) ** 2) / 4  # center dist ** 2
+
+
 
             if CIoU:  # https://github.com/Zzh-tju/DIoU-SSD-pytorch/blob/master/utils/box/box_utils.py#L47
                 v = (4 / math.pi ** 2) * (torch.atan(w2 / h2) - torch.atan(w1 / h1)).pow(2)
                 with torch.no_grad():
                     alpha = v / ((1 + eps) - inter / union + v) if alphaIoU else v / (v - iou + (1 + eps))
-                return iou - (rho2 / c2 + torch.pow(v * alpha + eps, alpha_value))if alphaIoU else iou - (rho2 / c2 + v * alpha)  # CIoU
+                if alphaIoU:
+                    return iou - (rho2 / c2 + torch.pow(v * alpha + eps, alpha_value))
+                else:
+                    return iou - (rho2 / c2 + v * alpha)  # CIoU
 
             if EIoU:
                 rho_w2 = ((b2_x2 - b2_x1) - (b1_x2 - b1_x1)) ** (alpha_value * 2) if alphaIoU else ((b2_x2 - b2_x1) - (b1_x2 - b1_x1)) ** 2
                 rho_h2 = ((b2_y2 - b2_y1) - (b1_y2 - b1_y1)) ** (alpha_value * 2) if alphaIoU else ((b2_y2 - b2_y1) - (b1_y2 - b1_y1)) ** 2
-                cw2 = cw ** (2 * alpha_value) + eps if alphaIoU else cw ** 2 + eps
-                ch2 = ch ** (2 * alpha_value) + eps if alphaIoU else ch ** 2 + eps
+                cw2 = torch.pow(cw ** 2 + eps,  alpha_value) if alphaIoU else cw ** 2 + eps
+                ch2 = torch.pow(ch ** 2 + eps,  alpha_value) if alphaIoU else ch ** 2 + eps
                 return iou - (rho2 / c2 + rho_w2 / cw2 + rho_h2 / ch2)
 
             if WIoU:
