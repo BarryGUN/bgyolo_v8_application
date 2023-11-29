@@ -57,19 +57,20 @@ class FocalLoss(nn.Module):
 class BboxLoss(nn.Module):
 
     def __init__(self, reg_max, use_dfl=False,
-                 EIoU=False,
+                 # EIoU=False,
                  # WIoU=False,
-                 alphaIoU=True,
+                 # alphaIoU=True,
                  # batch_size=2,
                  # gamma=1.9,
                  # delta=3,
-                 alpha=3):
+                 # alpha=3
+                 ):
         """Initialize the BboxLoss module with regularization maximum and DFL settings."""
         super().__init__()
         self.reg_max = reg_max
         self.use_dfl = use_dfl
         # self.WIoU = WIoU
-        self.EIoU = EIoU
+        # self.EIoU = EIoU
         # if WIoU:
         #     self.WIoUDict = {
         #         'batch_size': batch_size,
@@ -77,8 +78,8 @@ class BboxLoss(nn.Module):
         #         'delta': delta
         #     }
         #     self.EIoU = False
-        self.alpha = alpha
-        self.alphaIoU = alphaIoU
+        # self.alpha = alpha
+        # self.alphaIoU = alphaIoU
 
     def forward(self, pred_dist,
                 pred_bboxes,
@@ -165,7 +166,7 @@ class v8DetectionLoss:
     """Criterion class for computing training losses."""
 
     def __init__(self, model):  # model must be de-paralleled
-
+        """Initializes v8DetectionLoss with the model, defining model-related properties and BCE loss function."""
         device = next(model.parameters()).device  # get model device
         h = model.args  # hyperparameters
 
@@ -177,40 +178,11 @@ class v8DetectionLoss:
         self.no = m.no
         self.reg_max = m.reg_max
         self.device = device
-        self.epoch = 0
+
         self.use_dfl = m.reg_max > 1
-        self.assigner = TaskAlignedAssigner(topk=10,
-                                            num_classes=self.nc,
-                                            alpha=0.5,
-                                            beta=6.0,
-                                            alpha_power=self.hyp.alpha_regx,
-                                            alpha_power_value=self.hyp.alpha)
-        # if self.hyp.wiou:
-        #     self.bbox_loss = BboxLoss(m.reg_max - 1,
-        #                               use_dfl=self.use_dfl,
-        #                               WIoU=True,
-        #                               gamma=self.hyp.gamma,
-        #                               delta=self.hyp.delta,
-        #                               batch_size=self.hyp.batch,
-        #                               alphaIoU=self.hyp.alpha_regx,
-        #                               alpha=self.hyp.alpha
-        #
-        #                               ).to(device)
-        #     self.assigner.set_wiou(self.bbox_loss.WIoUDict)
-        # if self.hyp.eiou:
-        #     self.bbox_loss = BboxLoss(m.reg_max - 1,
-        #                               use_dfl=self.use_dfl,
-        #                               EIoU=True,
-        #                               alphaIoU=self.hyp.alpha_regx,
-        #                               alpha=self.hyp.alpha
-        #                               )
-        #     self.assigner.set_eiou()
-        # else:
-        self.bbox_loss = BboxLoss(m.reg_max - 1,
-                                  use_dfl=self.use_dfl,
-                                  alphaIoU=self.hyp.alpha_regx,
-                                  alpha=self.hyp.alpha
-                                  )
+
+        self.assigner = TaskAlignedAssigner(topk=10, num_classes=self.nc, alpha=0.5, beta=6.0)
+        self.bbox_loss = BboxLoss(m.reg_max - 1, use_dfl=self.use_dfl).to(device)
         self.proj = torch.arange(m.reg_max, dtype=torch.float, device=device)
 
     def preprocess(self, targets, batch_size, scale_tensor):
@@ -239,9 +211,6 @@ class v8DetectionLoss:
             # pred_dist = (pred_dist.view(b, a, c // 4, 4).softmax(2) * self.proj.type(pred_dist.dtype).view(1, 1, -1, 1)).sum(2)
         return dist2bbox(pred_dist, anchor_points, xywh=False)
 
-    def update_epoch(self, epoch):
-        self.epoch = epoch
-
     def __call__(self, preds, batch):
         """Calculate the sum of the loss for box, cls and dfl multiplied by batch size."""
         loss = torch.zeros(3, device=self.device)  # box, cls, dfl
@@ -257,42 +226,37 @@ class v8DetectionLoss:
         imgsz = torch.tensor(feats[0].shape[2:], device=self.device, dtype=dtype) * self.stride[0]  # image size (h,w)
         anchor_points, stride_tensor = make_anchors(feats, self.stride, 0.5)
 
-        # targets
+        # Targets
         targets = torch.cat((batch['batch_idx'].view(-1, 1), batch['cls'].view(-1, 1), batch['bboxes']), 1)
         targets = self.preprocess(targets.to(self.device), batch_size, scale_tensor=imgsz[[1, 0, 1, 0]])
         gt_labels, gt_bboxes = targets.split((1, 4), 2)  # cls, xyxy
         mask_gt = gt_bboxes.sum(2, keepdim=True).gt_(0)
 
-        # pboxes
+        # Pboxes
         pred_bboxes = self.bbox_decode(anchor_points, pred_distri)  # xyxy, (b, h*w, 4)
-        # if self.hyp.wiou:
-        #     self.assigner.update_epoch(self.epoch)
 
         _, target_bboxes, target_scores, fg_mask, _ = self.assigner(
             pred_scores.detach().sigmoid(), (pred_bboxes.detach() * stride_tensor).type(gt_bboxes.dtype),
             anchor_points * stride_tensor, gt_labels, gt_bboxes, mask_gt)
 
-
         target_scores_sum = max(target_scores.sum(), 1)
-        # cls loss
+
+        # Cls loss
         # loss[1] = self.varifocal_loss(pred_scores, target_scores, target_labels) / target_scores_sum  # VFL way
         loss[1] = self.bce(pred_scores, target_scores.to(dtype)).sum() / target_scores_sum  # BCE
 
-        # bbox loss
+        # Bbox loss
         if fg_mask.sum():
             target_bboxes /= stride_tensor
-            # if self.hyp.wiou:
-            #     loss[0], loss[2] = self.bbox_loss(pred_distri, pred_bboxes, anchor_points, target_bboxes, target_scores,
-            #                                   target_scores_sum, fg_mask, epoch=self.epoch)
-            # else:
             loss[0], loss[2] = self.bbox_loss(pred_distri, pred_bboxes, anchor_points, target_bboxes, target_scores,
-                                                  target_scores_sum, fg_mask)
+                                              target_scores_sum, fg_mask)
 
         loss[0] *= self.hyp.box  # box gain
         loss[1] *= self.hyp.cls  # cls gain
         loss[2] *= self.hyp.dfl  # dfl gain
 
         return loss.sum() * batch_size, loss.detach()  # loss(box, cls, dfl)
+
 
 
 class v8SegmentationLoss(v8DetectionLoss):

@@ -62,8 +62,8 @@ class TaskAlignedAssigner(nn.Module):
     """
     A task-aligned assigner for object detection.
 
-    This class assigns ground-truth (gt) objects to anchors based on the task-aligned metric,
-    which combines both classification and localization information.
+    This class assigns ground-truth (gt) objects to anchors based on the task-aligned metric, which combines both
+    classification and localization information.
 
     Attributes:
         topk (int): The number of top candidates to consider.
@@ -73,13 +73,7 @@ class TaskAlignedAssigner(nn.Module):
         eps (float): A small value to prevent division by zero.
     """
 
-    def __init__(self, topk=13,
-                 num_classes=80,
-                 alpha=1.0,
-                 beta=6.0,
-                 eps=1e-9,
-                 alpha_power=False,
-                 alpha_power_value=3):
+    def __init__(self, topk=13, num_classes=80, alpha=1.0, beta=6.0, eps=1e-9):
         """Initialize a TaskAlignedAssigner object with customizable hyperparameters."""
         super().__init__()
         self.topk = topk
@@ -88,29 +82,12 @@ class TaskAlignedAssigner(nn.Module):
         self.alpha = alpha
         self.beta = beta
         self.eps = eps
-        # self.WIoU = False
-        self.EIoU = False
-        self.alpha_power = alpha_power
-        self.alpha_power_value = alpha_power_value
-
-
-    # def set_wiou(self, WIoUDict):
-    #     self.WIoUDict = WIoUDict
-    #     self.WIoU = True
-    #     self.EIoU = False
-
-    # def update_epoch(self, epoch):
-    #     self.WIoUDict['epoch'] = epoch
-
-    def set_eiou(self):
-        # self.WIoU = False
-        self.EIoU = True
 
     @torch.no_grad()
     def forward(self, pd_scores, pd_bboxes, anc_points, gt_labels, gt_bboxes, mask_gt):
         """
-        Compute the task-aligned assignment.
-        Reference https://github.com/Nioolek/PPYOLOE_pytorch/blob/master/ppyoloe/assigner/tal_assigner.py
+        Compute the task-aligned assignment. Reference code is available at
+        https://github.com/Nioolek/PPYOLOE_pytorch/blob/master/ppyoloe/assigner/tal_assigner.py.
 
         Args:
             pd_scores (Tensor): shape(bs, num_total_anchors, num_classes)
@@ -159,9 +136,7 @@ class TaskAlignedAssigner(nn.Module):
         # Get anchor_align metric, (b, max_num_obj, h*w)
         align_metric, overlaps = self.get_box_metrics(pd_scores, pd_bboxes, gt_labels, gt_bboxes, mask_in_gts * mask_gt)
         # Get topk_metric mask, (b, max_num_obj, h*w)
-        # mask_topk = self.select_topk_candidates(align_metric, topk_mask=mask_gt.expand(-1, -1, self.topk).bool())
-        mask_topk = self.select_topk_candidates(align_metric * mask_in_gts,
-                                                topk_mask=mask_gt.repeat([1, 1, self.topk]).bool())
+        mask_topk = self.select_topk_candidates(align_metric, topk_mask=mask_gt.expand(-1, -1, self.topk).bool())
         # Merge all mask to a final mask, (b, max_num_obj, h*w)
         mask_pos = mask_topk * mask_in_gts * mask_gt
 
@@ -183,30 +158,7 @@ class TaskAlignedAssigner(nn.Module):
         # (b, max_num_obj, 1, 4), (b, 1, h*w, 4)
         pd_boxes = pd_bboxes.unsqueeze(1).expand(-1, self.n_max_boxes, -1, -1)[mask_gt]
         gt_boxes = gt_bboxes.unsqueeze(2).expand(-1, -1, na, -1)[mask_gt]
-        # overlaps[mask_gt] = bbox_iou(gt_boxes, pd_boxes, xywh=False, CIoU=True).squeeze(-1).clamp_(0)
-        # if self.WIoU:
-        #     overlaps[mask_gt] = bbox_iou(gt_boxes,
-        #                                  pd_boxes,
-        #                                  xywh=False,
-        #                                  CIoU=False,
-        #                                  WIoU=self.WIoU,
-        #                                  WIoUDict=self.WIoUDict)[2].squeeze(-1).clamp_(0)
-        # if self.EIoU:
-        #     overlaps[mask_gt] = bbox_iou(gt_boxes,
-        #                                  pd_boxes,
-        #                                  xywh=False,
-        #                                  EIoU=True,
-        #                                  alphaIoU=self.alpha_power,
-        #                                  alpha_value=self.alpha_power_value
-        #                                  ).squeeze(-1).clamp_(0)
-        # else:
-        overlaps[mask_gt] = bbox_iou(gt_boxes,
-                                     pd_boxes,
-                                     xywh=False,
-                                     CIoU=True,
-                                     # alphaIoU=self.alpha_power,
-                                     # alpha_value=self.alpha_power_value
-                                     ).squeeze(-1).clamp_(0)
+        overlaps[mask_gt] = bbox_iou(gt_boxes, pd_boxes, xywh=False, CIoU=True).squeeze(-1).clamp_(0)
 
         align_metric = bbox_scores.pow(self.alpha) * overlaps.pow(self.beta)
         return align_metric, overlaps
@@ -228,10 +180,6 @@ class TaskAlignedAssigner(nn.Module):
             (Tensor): A tensor of shape (b, max_num_obj, h*w) containing the selected top-k candidates.
         """
 
-        """
-        new 
-        """
-
         # (b, max_num_obj, topk)
         topk_metrics, topk_idxs = torch.topk(metrics, self.topk, dim=-1, largest=largest)
         if topk_mask is None:
@@ -246,14 +194,10 @@ class TaskAlignedAssigner(nn.Module):
             # Expand topk_idxs for each value of k and add 1 at the specified positions
             count_tensor.scatter_add_(-1, topk_idxs[:, :, k:k + 1], ones)
         # count_tensor.scatter_add_(-1, topk_idxs, torch.ones_like(topk_idxs, dtype=torch.int8, device=topk_idxs.device))
-        # filter invalid bboxes
+        # Filter invalid bboxes
         count_tensor.masked_fill_(count_tensor > 1, 0)
 
         return count_tensor.to(metrics.dtype)
-
-
-
-
 
     def get_targets(self, gt_labels, gt_bboxes, target_gt_idx, fg_mask):
         """
