@@ -204,8 +204,8 @@ class TaskAlignedAssigner(nn.Module):
                                      pd_boxes,
                                      xywh=False,
                                      CIoU=True,
-                                     alphaIoU=self.alpha_power,
-                                     alpha_value=self.alpha_power_value
+                                     # alphaIoU=self.alpha_power,
+                                     # alpha_value=self.alpha_power_value
                                      ).squeeze(-1).clamp_(0)
 
         align_metric = bbox_scores.pow(self.alpha) * overlaps.pow(self.beta)
