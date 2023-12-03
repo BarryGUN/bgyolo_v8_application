@@ -160,7 +160,10 @@ class v8DetectionLoss:
              self.bbox_loss = BboxLoss(m.reg_max - 1, use_dfl=self.use_dfl, EIoU=True).to(device)
         else:
             self.bbox_loss = BboxLoss(m.reg_max - 1, use_dfl=self.use_dfl).to(device)
-        self.assigner = TaskAlignedAssigner(topk=10, num_classes=self.nc, alpha=0.5, beta=6.0, EIoU=self.hyp.eiou)
+        # self.assigner = TaskAlignedAssigner(topk=10, num_classes=self.nc, alpha=0.5, beta=6.0, EIoU=self.hyp.eiou)
+
+        # use ciou for tal
+        self.assigner = TaskAlignedAssigner(topk=10, num_classes=self.nc, alpha=0.5, beta=6.0)
 
         self.proj = torch.arange(m.reg_max, dtype=torch.float, device=device)
 
