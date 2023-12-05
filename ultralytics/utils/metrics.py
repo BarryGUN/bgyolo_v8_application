@@ -166,6 +166,8 @@ def bbox_iou(box1,
                 ch2 = ch ** 2 + eps
                 if EFocal:
                     return iou - (rho2 / c2 + rho_w2 / cw2 + rho_h2 / ch2), iou ** 0.5
+                else:
+                    return iou - (rho2 / c2 + rho_w2 / cw2 + rho_h2 / ch2)
 
             return iou - rho2 / c2  # DIoU
 
