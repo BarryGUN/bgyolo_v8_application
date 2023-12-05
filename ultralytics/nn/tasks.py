@@ -700,7 +700,7 @@ def parse_model(d, ch, verbose=True):  # model_dict, input_channels(3)
         elif m in [BiConcat, BinConcat, BibnConcat]:
             c2 = sum(ch[x] for x in f)
             if m in [BinConcat, BibnConcat]:
-                args = [len(f), c2 ,args[0]]
+                args = [len(f), c2, args[0]]
             else:
                 args = [len(f), args[0]]
         elif m in (Detect, Segment, Pose):

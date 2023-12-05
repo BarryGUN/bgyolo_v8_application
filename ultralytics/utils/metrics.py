@@ -105,7 +105,9 @@ def bbox_iou(box1,
              DIoU=False,
              CIoU=False,
              EIoU=False,
+             EFocal=False,
              eps=1e-7,
+
              ):
     """
     Calculate Intersection over Union (IoU) of box1(1, 4) to box2(n, 4).
@@ -162,7 +164,8 @@ def bbox_iou(box1,
                 rho_h2 = ((b2_y2 - b2_y1) - (b1_y2 - b1_y1)) ** 2
                 cw2 = cw ** 2 + eps
                 ch2 = ch ** 2 + eps
-                return iou - (rho2 / c2 + rho_w2 / cw2 + rho_h2 / ch2)
+                if EFocal:
+                    return iou - (rho2 / c2 + rho_w2 / cw2 + rho_h2 / ch2), iou ** 0.5
 
             return iou - rho2 / c2  # DIoU
 
