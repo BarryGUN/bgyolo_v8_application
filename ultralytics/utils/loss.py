@@ -59,7 +59,6 @@ class BboxLoss(nn.Module):
     def __init__(self, reg_max,
                  use_dfl=False,
                  EIoU=False,
-                 EFocal=False
                  # alphaIoU=True,
                  # batch_size=2,
                  # gamma=1.9,
@@ -71,7 +70,6 @@ class BboxLoss(nn.Module):
         self.reg_max = reg_max
         self.use_dfl = use_dfl
         self.EIoU = EIoU
-        self.EFocal = EFocal
         # self.alpha = alpha
         # self.alphaIoU = alphaIoU
 
@@ -89,29 +87,18 @@ class BboxLoss(nn.Module):
         # iou = bbox_iou(pred_bboxes[fg_mask], target_bboxes[fg_mask], xywh=False, CIoU=True)
 
         if self.EIoU:
-            if self.EFocal:
-                eiou, iou = bbox_iou(pred_bboxes[fg_mask],
-                               target_bboxes[fg_mask],
-                               xywh=False,
-                               EIoU=True,
-                               EFocal=True)
-                loss_iou = ((1.0 - eiou) * weight).sum() / target_scores_sum
-                loss_iou = iou * loss_iou
-
-            else:
-                iou = bbox_iou(pred_bboxes[fg_mask],
-                               target_bboxes[fg_mask],
-                               xywh=False,
-                               EIoU=True)
-                loss_iou = ((1.0 - iou) * weight).sum() / target_scores_sum
-
+            iou = bbox_iou(pred_bboxes[fg_mask],
+                           target_bboxes[fg_mask],
+                           xywh=False,
+                           EIoU=True)
 
         else:
             iou = bbox_iou(pred_bboxes[fg_mask],
                            target_bboxes[fg_mask],
                            xywh=False,
                            CIoU=True)
-            loss_iou = ((1.0 - iou) * weight).sum() / target_scores_sum
+
+        loss_iou = ((1.0 - iou) * weight).sum() / target_scores_sum
 
         # DFL loss
         if self.use_dfl:
