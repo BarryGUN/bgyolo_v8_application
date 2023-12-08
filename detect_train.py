@@ -6,7 +6,7 @@ if __name__ == '__main__':
     # model = YOLO('runs/detect/train/n/yolov8n-bdd100k-densefpn-eiou-bs16-linear-adamw/weights/last.pt')
 
     # model.load('pretrain/train/n/yolov8n-vlpd-bs16/weights/best.pt')
-    model = YOLO('bdd100k/yolov8-bibncat-repconv.yaml')
+    model = YOLO('bdd100k/yolov8-bibncat-c2fsa.yaml')
     model.train(data='coco128.yaml',
                 epochs=600,
                 project='runs/detect/train/n',
@@ -26,7 +26,6 @@ if __name__ == '__main__':
                 deterministic=True,
                 # wiou=True,
                 eiou=False,
-                alpha_regx=True,
                 patience=100
 
 

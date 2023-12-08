@@ -148,7 +148,7 @@ def yolo2coco(arg):
     if arg.random_split or arg.split_by_file:
         for phase in ['train', 'val', 'test']:
             json_name = os.path.join(root_path, 'annotations/{}.json'.format(phase))
-            with open(json_name, 'w') as f:
+            with open(json_name, 'w', encoding='utf-8') as f:
                 if phase == 'train':
                     json.dump(train_dataset, f)
                 elif phase == 'val':
@@ -158,7 +158,7 @@ def yolo2coco(arg):
             print('Save annotation to {}'.format(json_name))
     else:
         json_name = os.path.join(root_path, 'annotations/{}'.format(arg.save_path))
-        with open(json_name, 'w') as f:
+        with open(json_name, 'w', encoding='utf-8') as f:
             json.dump(dataset, f)
             print('Save annotation to {}'.format(json_name))
 
