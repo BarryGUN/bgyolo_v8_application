@@ -129,7 +129,7 @@ class DetectionValidator(BaseValidator):
 
             # Save
             if self.args.save_json:
-                self.pred_to_json(predn, batch['im_file'][si], index)
+                self.pred_to_json(predn, batch['im_file'][si])
             if self.args.save_txt:
                 file = self.save_dir / 'labels' / f'{Path(batch["im_file"][si]).stem}.txt'
                 self.save_one_txt(predn, self.args.save_conf, shape, file)
