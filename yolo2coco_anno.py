@@ -134,8 +134,8 @@ def yolo2coco(arg):
                     'bbox': [x1, y1, width, height],
                     'category_id': cls_id,
                     'id': ann_id_cnt,
-                    # 'image_id': k,
-                    'image_id': index,
+                    'image_id': k,
+                    # 'image_id': index,
                     'iscrowd': 0,
                     # mask, 矩形是从左上角点按顺时针的四个顶点
                     'segmentation': [[x1, y1, x2, y1, x2, y2, x1, y2]]
