@@ -25,9 +25,9 @@ if __name__ == '__main__':
 	# #
 	# print(predsw)
 	# print('-----------------------------------------')
-	# # a = set(predsw) & set(gt)
-	# print(gt)
-	# # print(a)
+	# a = set(predsw) & set(gt)
+	# # print(gt)
+	# print(a)
 	# # print(set(predsw))
 	# 创建COCOeval对象
 	cocoEval = COCOeval(cocoGt, cocoDt, 'bbox')

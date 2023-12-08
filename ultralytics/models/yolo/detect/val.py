@@ -88,7 +88,7 @@ class DetectionValidator(BaseValidator):
                                        max_det=self.args.max_det)
 
     # def update_metrics(self, preds, batch):
-    def update_metrics(self, preds, batch, index):
+    def update_metrics(self, preds, batch):
         """Metrics."""
         for si, pred in enumerate(preds):
             idx = batch['batch_idx'] == si
@@ -238,11 +238,12 @@ class DetectionValidator(BaseValidator):
                 f.write(('%g ' * len(line)).rstrip() % line + '\n')
 
     # def pred_to_json(self, predn, filename):
-    def pred_to_json(self, predn, filename, index):
+    def pred_to_json(self, predn, filename):
         """Serialize YOLO predictions to COCO json format."""
         stem = Path(filename).stem
         # image_id = int(stem) if stem.isnumeric() else stem
-        image_id = int(stem) if stem.isnumeric() else index
+        image_id = int(stem) if stem.isnumeric() else BaseValidator.image_id
+        BaseValidator.image_id += 1
         box = ops.xyxy2xywh(predn[:, :4])  # xywh
         box[:, :2] -= box[:, 2:] / 2  # xy center to top-left corner
         for p, b in zip(predn.tolist(), box.tolist()):

@@ -62,7 +62,7 @@ class BaseValidator:
         plots (dict): Dictionary to store plots for visualization.
         callbacks (dict): Dictionary to store various callback functions.
     """
-
+    image_id = 0
     def __init__(self, dataloader=None, save_dir=None, pbar=None, args=None, _callbacks=None):
         """
         Initializes a BaseValidator instance.
@@ -177,7 +177,7 @@ class BaseValidator:
                 preds = self.postprocess(preds)
 
             # self.update_metrics(preds, batch)
-            self.update_metrics(preds, batch, index=batch_i)
+            self.update_metrics(preds, batch)
             if self.args.plots and batch_i < 3:
                 self.plot_val_samples(batch, batch_i)
                 self.plot_predictions(batch, preds, batch_i)
@@ -279,7 +279,7 @@ class BaseValidator:
         pass
 
     # def update_metrics(self, preds, batch):
-    def update_metrics(self, preds, batch, index):
+    def update_metrics(self, preds, batch):
         """Updates metrics based on predictions and batch."""
         pass
 
@@ -322,7 +322,7 @@ class BaseValidator:
         pass
 
     # def pred_to_json(self, preds, batch):
-    def pred_to_json(self, preds, batch, index):
+    def pred_to_json(self, preds, batch):
         """Convert predictions to JSON format."""
         pass
 
