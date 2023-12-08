@@ -29,7 +29,7 @@ if __name__ == '__main__':
 	# # print(gt)
 	# print(a)
 	# # print(set(predsw))
-	# 创建COCOeval对象
+	# # 创建COCOeval对象
 	cocoEval = COCOeval(cocoGt, cocoDt, 'bbox')
 
 	# 执行评估

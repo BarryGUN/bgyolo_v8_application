@@ -62,7 +62,6 @@ class BaseValidator:
         plots (dict): Dictionary to store plots for visualization.
         callbacks (dict): Dictionary to store various callback functions.
     """
-    image_id = 0
     def __init__(self, dataloader=None, save_dir=None, pbar=None, args=None, _callbacks=None):
         """
         Initializes a BaseValidator instance.

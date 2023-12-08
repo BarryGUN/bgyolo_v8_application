@@ -241,8 +241,8 @@ class DetectionValidator(BaseValidator):
     def pred_to_json(self, predn, filename):
         """Serialize YOLO predictions to COCO json format."""
         stem = Path(filename).stem
-        # image_id = int(stem) if stem.isnumeric() else stem
-        image_id = int(stem) if stem.isnumeric() else BaseValidator.image_id
+        image_id = int(stem) if stem.isnumeric() else stem
+        # image_id = int(stem) if stem.isnumeric() else BaseValidator.image_id
         BaseValidator.image_id += 1
         box = ops.xyxy2xywh(predn[:, :4])  # xywh
         box[:, :2] -= box[:, 2:] / 2  # xy center to top-left corner
