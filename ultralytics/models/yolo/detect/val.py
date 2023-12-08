@@ -243,7 +243,6 @@ class DetectionValidator(BaseValidator):
         stem = Path(filename).stem
         image_id = int(stem) if stem.isnumeric() else stem
         # image_id = int(stem) if stem.isnumeric() else BaseValidator.image_id
-        BaseValidator.image_id += 1
         box = ops.xyxy2xywh(predn[:, :4])  # xywh
         box[:, :2] -= box[:, 2:] / 2  # xy center to top-left corner
         for p, b in zip(predn.tolist(), box.tolist()):
