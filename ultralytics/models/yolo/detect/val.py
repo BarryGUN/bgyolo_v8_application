@@ -87,7 +87,8 @@ class DetectionValidator(BaseValidator):
                                        agnostic=self.args.single_cls,
                                        max_det=self.args.max_det)
 
-    def update_metrics(self, preds, batch):
+    # def update_metrics(self, preds, batch):
+    def update_metrics(self, preds, batch, index):
         """Metrics."""
         for si, pred in enumerate(preds):
             idx = batch['batch_idx'] == si
@@ -128,7 +129,7 @@ class DetectionValidator(BaseValidator):
 
             # Save
             if self.args.save_json:
-                self.pred_to_json(predn, batch['im_file'][si])
+                self.pred_to_json(predn, batch['im_file'][si], index)
             if self.args.save_txt:
                 file = self.save_dir / 'labels' / f'{Path(batch["im_file"][si]).stem}.txt'
                 self.save_one_txt(predn, self.args.save_conf, shape, file)
@@ -236,10 +237,12 @@ class DetectionValidator(BaseValidator):
             with open(file, 'a') as f:
                 f.write(('%g ' * len(line)).rstrip() % line + '\n')
 
-    def pred_to_json(self, predn, filename):
+    # def pred_to_json(self, predn, filename):
+    def pred_to_json(self, predn, filename, index):
         """Serialize YOLO predictions to COCO json format."""
         stem = Path(filename).stem
-        image_id = int(stem) if stem.isnumeric() else stem
+        # image_id = int(stem) if stem.isnumeric() else stem
+        image_id = int(stem) if stem.isnumeric() else index
         box = ops.xyxy2xywh(predn[:, :4])  # xywh
         box[:, :2] -= box[:, 2:] / 2  # xy center to top-left corner
         for p, b in zip(predn.tolist(), box.tolist()):

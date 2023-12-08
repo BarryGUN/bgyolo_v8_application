@@ -176,7 +176,8 @@ class BaseValidator:
             with dt[3]:
                 preds = self.postprocess(preds)
 
-            self.update_metrics(preds, batch)
+            # self.update_metrics(preds, batch)
+            self.update_metrics(preds, batch, index=batch_i)
             if self.args.plots and batch_i < 3:
                 self.plot_val_samples(batch, batch_i)
                 self.plot_predictions(batch, preds, batch_i)
@@ -277,7 +278,8 @@ class BaseValidator:
         """Initialize performance metrics for the YOLO model."""
         pass
 
-    def update_metrics(self, preds, batch):
+    # def update_metrics(self, preds, batch):
+    def update_metrics(self, preds, batch, index):
         """Updates metrics based on predictions and batch."""
         pass
 
@@ -319,7 +321,8 @@ class BaseValidator:
         """Plots YOLO model predictions on batch images."""
         pass
 
-    def pred_to_json(self, preds, batch):
+    # def pred_to_json(self, preds, batch):
+    def pred_to_json(self, preds, batch, index):
         """Convert predictions to JSON format."""
         pass
 
