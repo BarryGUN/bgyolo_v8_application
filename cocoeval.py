@@ -68,6 +68,8 @@ if __name__ == '__main__':
 						help="Full save path of result")
 	parser.add_argument('--save', action='store_true',
 						help="save or not ")
+	parser.add_argument('--task', type=str, default='detect',
+						help="[detect, segment, keypoints] ")
 
 	args = parser.parse_args()
 
