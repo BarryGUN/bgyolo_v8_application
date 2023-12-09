@@ -27,14 +27,6 @@ class COCOValidator:
 
 
 	def eval(self):
-		# os.makedirs('runs/train')
-
-		pred_json = 'w/dense-eiou/predictions.json'
-		anno_json = 'data/val.json'
-
-		# 使用COCO API加载预测结果和标注
-		cocoGt = COCO(anno_json)
-		cocoDt = cocoGt.loadRes(pred_json)
 
 		cocoGt = COCO(self.args.anno_json)
 		cocoDt = cocoGt.loadRes(self.args.pred_json)
