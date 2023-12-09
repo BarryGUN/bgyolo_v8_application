@@ -91,6 +91,7 @@ def yolo2coco(arg):
     for k, index in enumerate(tqdm(indexes)):
         # 支持 png jpg 格式的图片。
         txtFile = index.replace('images', 'txt').replace('.jpg', '.txt').replace('.png', '.txt')
+        image_id = index.split(' ')[0]
         # 读取图像的宽和高
         im = cv2.imread(os.path.join(root_path, 'images/') + index)
         height, width, _ = im.shape
@@ -104,7 +105,8 @@ def yolo2coco(arg):
                 dataset = test_dataset
         # 添加图像的信息
         dataset['images'].append({'file_name': index,
-                                  'id': k,
+                                  # 'id': k,
+                                  'id': image_id,
                                   'width': width,
                                   'height': height})
         if not os.path.exists(os.path.join(originLabelsDir, txtFile)):
@@ -134,8 +136,9 @@ def yolo2coco(arg):
                     'bbox': [x1, y1, width, height],
                     'category_id': cls_id,
                     'id': ann_id_cnt,
-                    'image_id': k,
+                    # 'image_id': k,
                     # 'image_id': index,
+                    'image_id': image_id,
                     'iscrowd': 0,
                     # mask, 矩形是从左上角点按顺时针的四个顶点
                     'segmentation': [[x1, y1, x2, y1, x2, y2, x1, y2]]
