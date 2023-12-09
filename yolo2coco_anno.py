@@ -7,6 +7,8 @@ YOLO 格式的数据集转化为 COCO 格式的数据集
 """
 
 import os
+from pathlib import Path
+
 import cv2
 import json
 from tqdm import tqdm
@@ -91,7 +93,7 @@ def yolo2coco(arg):
     for k, index in enumerate(tqdm(indexes)):
         # 支持 png jpg 格式的图片。
         txtFile = index.replace('images', 'txt').replace('.jpg', '.txt').replace('.png', '.txt')
-        image_id = index.split(' ')[0]
+        image_id = Path(index).stem
         # 读取图像的宽和高
         im = cv2.imread(os.path.join(root_path, 'images/') + index)
         height, width, _ = im.shape
