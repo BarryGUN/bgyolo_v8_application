@@ -30,22 +30,22 @@ class COCOValidator:
     def save(self, stats, folder, name):
         stats_dict = {
             'AP': {
-                'all@50-95': stats[0],
-                'all@50': stats[1],
-                'all@75': stats[2],
-                'small@50-95': stats[3],
-                'medium@50-95': stats[4],
-                'large@50-95': stats[5],
+                'all@50-95': round(stats[0], 3),
+                'all@50': round(stats[1], 3),
+                'all@75': round(stats[2], 3),
+                'small@50-95': round(stats[3], 3),
+                'medium@50-95': round(stats[4], 3),
+                'large@50-95': round(stats[5], 3),
 
             },
 
             'AR': {
-                'all@50-95': stats[6],
-                'all@50': stats[7],
-                'all@75': stats[8],
-                'small@50-95': stats[9],
-                'medium@50-95': stats[10],
-                'large@50-95': stats[11],
+                'all@50-95': round(stats[6], 3),
+                'all@50': round(stats[7], 3),
+                'all@75': round(stats[8], 3),
+                'small@50-95': round(stats[9], 3),
+                'medium@50-95': round(stats[10], 3),
+                'large@50-95': round(stats[11], 3),
 
             }
         }
