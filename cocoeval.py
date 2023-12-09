@@ -7,6 +7,7 @@
 import argparse
 import os
 
+import pandas as pd
 from pycocotools.coco import COCO
 from pycocotools.cocoeval import COCOeval
 
@@ -25,6 +26,32 @@ class COCOValidator:
         if opt_str == 'keypoints':
             return 'keypoints'
 
+
+    def save(self, stats, folder, name):
+        stats_dict = {
+            'AP': {
+                'all@50-95': stats[0],
+                'all@50': stats[1],
+                'all@75': stats[2],
+                'small@50-95': stats[3],
+                'medium@50-95': stats[4],
+                'large@50-95': stats[5],
+
+            },
+
+            'AR': {
+                'all@50-95': stats[6],
+                'all@50': stats[7],
+                'all@75': stats[8],
+                'small@50-95': stats[9],
+                'medium@50-95': stats[10],
+                'large@50-95': stats[11],
+
+            }
+        }
+
+        pd.DataFrame(stats_dict).to_csv(os.path.join(folder, f'{name}.csv'))
+
     def eval(self):
 
         cocoGt = COCO(self.args.anno_json)
@@ -37,20 +64,21 @@ class COCOValidator:
         cocoEval.accumulate()
         cocoEval.summarize()
 
-        # if self.args.save:
-        #     # project_path = os.path.dirname(os.getcwd())
-        #     # abs_save_path = os.path.join(project_path, self.args.save_path)
-        #     if not os.path.exists(self.args.save_folder_path):
-        #         os.makedirs(self.args.save_folder_path)
-        #
-        #     with open(os.path.join(self.args.save_folder_path, f"{self.args.name}.txt"), 'w') as f:
-        #         f.write(str(cocoEval.stats))
-        #     if self.args.log:
-        #         with open(os.path.join(self.args.save_folder_path, f"{self.args.name}-log.txt"), 'w') as f:
-        #             print(cocoEval.stats, file=f)
+        if self.args.save:
+            self.save(cocoEval.stats, self.args.save_folder_path, self.args.name)
+            # # project_path = os.path.dirname(os.getcwd())
+            # # abs_save_path = os.path.join(project_path, self.args.save_path)
+            # if not os.path.exists(self.args.save_folder_path):
+            #     os.makedirs(self.args.save_folder_path)
+            #
+            # with open(os.path.join(self.args.save_folder_path, f"{self.args.name}.txt"), 'w') as f:
+            #     f.write(str(cocoEval.stats))
+            # if self.args.log:
+            #     with open(os.path.join(self.args.save_folder_path, f"{self.args.name}-log.txt"), 'w') as f:
+            #         print(cocoEval.stats, file=f)
         #
         # # 打印结果
-        # return cocoEval.stats
+        return cocoEval.stats
 
 
 if __name__ == '__main__':
