@@ -37,20 +37,20 @@ class COCOValidator:
         cocoEval.accumulate()
         cocoEval.summarize()
 
-        if self.args.save:
-            # project_path = os.path.dirname(os.getcwd())
-            # abs_save_path = os.path.join(project_path, self.args.save_path)
-            if not os.path.exists(self.args.save_folder_path):
-                os.makedirs(self.args.save_folder_path)
-
-            with open(os.path.join(self.args.save_folder_path, f"{self.args.name}.txt"), 'w') as f:
-                f.write(str(cocoEval.stats))
-            if self.args.log:
-                with open(os.path.join(self.args.save_folder_path, f"{self.args.name}-log.txt"), 'w') as f:
-                    print(cocoEval.stats, file=f)
-
-        # 打印结果
-        return cocoEval.stats
+        # if self.args.save:
+        #     # project_path = os.path.dirname(os.getcwd())
+        #     # abs_save_path = os.path.join(project_path, self.args.save_path)
+        #     if not os.path.exists(self.args.save_folder_path):
+        #         os.makedirs(self.args.save_folder_path)
+        #
+        #     with open(os.path.join(self.args.save_folder_path, f"{self.args.name}.txt"), 'w') as f:
+        #         f.write(str(cocoEval.stats))
+        #     if self.args.log:
+        #         with open(os.path.join(self.args.save_folder_path, f"{self.args.name}-log.txt"), 'w') as f:
+        #             print(cocoEval.stats, file=f)
+        #
+        # # 打印结果
+        # return cocoEval.stats
 
 
 if __name__ == '__main__':
