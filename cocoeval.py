@@ -53,7 +53,7 @@ class COCOValidator:
 			if not os.path.exists(self.args.save_folder_path):
 				os.makedirs(self.args.save_folder_path)
 			# 保存结果
-			with open(os.path.join(self.args.save_folder_path, self.args.name), 'w') as f:
+			with open(os.path.join(self.args.save_folder_path, f"{self.args.name}.txt"), 'w') as f:
 				f.write(str(cocoEval.stats))
 
 		# 打印结果
