@@ -47,6 +47,10 @@ class COCOValidator:
 			# 保存结果
 			with open(os.path.join(self.args.save_folder_path, f"{self.args.name}.txt"), 'w') as f:
 				f.write(str(cocoEval.stats))
+			if self.args.log:
+				# 保存结果
+				with open(os.path.join(self.args.save_folder_path, f"{self.args.name}-log.txt"), 'w') as f:
+					f.write(cocoEval.stats)
 
 		# 打印结果
 		return cocoEval.stats
@@ -64,6 +68,8 @@ if __name__ == '__main__':
 						help="File Name of result")
 	parser.add_argument('--save', action='store_true',
 						help="save or not ")
+	parser.add_argument('--log', action='store_true',
+						help="save log or not ")
 	parser.add_argument('--task', type=str, default='detect',
 						help="[detect, segment, keypoints] ")
 
@@ -71,4 +77,3 @@ if __name__ == '__main__':
 
 	validator = COCOValidator(args)
 	print(validator.eval())
-	validator.eval()
