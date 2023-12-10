@@ -29,29 +29,25 @@ class COCOValidator:
             return 'keypoints'
 
     def save(self, stats, folder, name):
-        stats_dict = [{
-            'AP': {
-                'all@50-95': round(stats[0], 3),
-                'all@50': round(stats[1], 3),
-                'all@75': round(stats[2], 3),
-                'small@50-95': round(stats[3], 3),
-                'medium@50-95': round(stats[4], 3),
-                'large@50-95': round(stats[5], 3),
 
-            },
+        indexes = [
+            ('AP', 'area=all', 'IoU=50:95'), ('AP', 'area=all', 'IoU=50'),
+            ('AP', 'area=all', 'IoU=75'), ('AP', 'area=all', 'IoU=50:95'),
+            ('AP', 'area=medium', 'IoU=50:95'), ('AP', 'area=large', 'IoU=50:95'),
+            ('AR', 'area=all', 'IoU=50:95'), ('AR', 'area=all', 'IoU=50'),
+            ('AR', 'area=all', 'IoU=75'), ('AR', 'area=all', 'IoU=50:95'),
+            ('AR', 'area=medium', 'IoU=50:95'), ('AR', 'area=large', 'IoU=50:95'),
+        ]
 
-            'AR': {
-                'all@50-95': round(stats[6], 3),
-                'all@50': round(stats[7], 3),
-                'all@75': round(stats[8], 3),
-                'small@50-95': round(stats[9], 3),
-                'medium@50-95': round(stats[10], 3),
-                'large@50-95': round(stats[11], 3),
+        values = [
+            round(stats[0], 3), round(stats[1], 3), round(stats[2], 3),
+            round(stats[3], 3), round(stats[4], 3), round(stats[5], 3),
+            round(stats[6], 3), round(stats[7], 3), round(stats[8], 3),
+            round(stats[9], 3), round(stats[10], 3),round(stats[11], 3),
 
-            }
-        }]
+                 ]
 
-        pd.DataFrame(stats_dict).to_csv(os.path.join(folder, f'{name}.csv'))
+        pd.DataFrame(data=values, index=indexes).T.to_csv(os.path.join(folder, f'{name}.csv'))
 
     def eval(self):
 
