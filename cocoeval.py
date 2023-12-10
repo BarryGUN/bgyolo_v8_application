@@ -16,6 +16,8 @@ class COCOValidator:
 
     def __init__(self, args):
         self.args = args
+        self.cocoGt = COCO(self.args.anno_json)
+        self.cocoDt = self.cocoGt.loadRes(self.args.pred_json)
 
     def _get_task(self, opt_str):
         if opt_str == 'detect':
@@ -26,9 +28,8 @@ class COCOValidator:
         if opt_str == 'keypoints':
             return 'keypoints'
 
-
     def save(self, stats, folder, name):
-        stats_dict = {
+        stats_dict = [{
             'AP': {
                 'all@50-95': round(stats[0], 3),
                 'all@50': round(stats[1], 3),
@@ -48,25 +49,22 @@ class COCOValidator:
                 'large@50-95': round(stats[11], 3),
 
             }
-        }
+        }]
 
         pd.DataFrame(stats_dict).to_csv(os.path.join(folder, f'{name}.csv'))
 
     def eval(self):
 
-        cocoGt = COCO(self.args.anno_json)
-        cocoDt = cocoGt.loadRes(self.args.pred_json)
+        cocoEval = COCOeval(self.cocoGt, self.cocoDt, self._get_task(self.args.task))
 
-        cocoEval = COCOeval(cocoGt, cocoDt, self._get_task(self.args.task))
-
-        # 执行评估
+        # eval
         cocoEval.evaluate()
         cocoEval.accumulate()
         cocoEval.summarize()
 
         if self.args.save:
             self.save(cocoEval.stats, self.args.save_folder_path, self.args.name)
-        # # 打印结果
+        # result
         return cocoEval.stats
 
 
