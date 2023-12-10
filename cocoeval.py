@@ -46,7 +46,7 @@ class COCOValidator:
             round(stats[9], 3), round(stats[10], 3),round(stats[11], 3),
 
                  ]
-
+        indexes = pd.MultiIndex.from_tuples(indexes)
         pd.DataFrame(data=values, index=indexes).T.to_csv(os.path.join(folder, f'{name}.csv'))
 
     def eval(self):
