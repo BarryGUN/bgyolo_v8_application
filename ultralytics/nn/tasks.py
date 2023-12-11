@@ -12,7 +12,7 @@ from ultralytics.nn.modules import (AIFI, C1, C2, C3, C3TR, SPP, SPPF, Bottlenec
                                     Focus, GhostBottleneck, GhostConv, HGBlock, HGStem, Pose, RepC3, RepConv,
                                     RTDETRDecoder, Segment)
 from ultralytics.nn.modules.block import MS2, MS2b, C2RepX, SplitMP, SPPFCSP, MS2d, MS2e, C2d, C2sc, C2RepXc, BiFuse, \
-    BiConcat, C2fBi, BinConcat, C2x, BibnConcat, C2fSA
+    BiConcat, C2fBi, BinConcat, C2x, BibnConcat, C2fSA, C2el
 from ultralytics.nn.modules.block_controlled_trial import C2RepXCCAB, C2RepXCBCBA
 from ultralytics.nn.modules.conv import RepXConv
 from ultralytics.nn.modules.repxconv_controlled_trial import RepXConvCCAB, RepXConvCBCBA
@@ -665,7 +665,7 @@ def parse_model(d, ch, verbose=True):  # model_dict, input_channels(3)
         if m in (Classify, Conv, ConvTranspose, GhostConv, Bottleneck, GhostBottleneck, SPP, SPPF, SPPFCSP, DWConv, Focus,
                  BottleneckCSP, C1, C2, C2f, C3, C3TR, C3Ghost, nn.ConvTranspose2d, DWConvTranspose2d, C3x, RepC3,
                  MS2, MS2b, C2RepX, SplitMP, MS2d, MS2e, C2RepXCCAB, C2RepXCBCBA, C2d, C2sc, C2RepXc, BiFuse, C2fBi,
-                 C2x, RepConv, C2fSA):
+                 C2x, RepConv, C2fSA, C2el):
             if m is BiFuse:
                 c_list = list(ch[i] for i in f)
                 c1, c2 = c_list, args[0]
@@ -679,7 +679,7 @@ def parse_model(d, ch, verbose=True):  # model_dict, input_channels(3)
 
                 args = [c1, c2, *args[1:]]
                 if m in (BottleneckCSP, C1, C2, C2f, C3, C3TR, C3Ghost, C3x, RepC3, MS2, MS2b, C2RepX,
-                         MS2d, MS2e, C2RepXCCAB, C2RepXCBCBA, C2d, C2sc, C2RepXc, C2fBi, C2x, C2fSA):
+                         MS2d, MS2e, C2RepXCCAB, C2RepXCBCBA, C2d, C2sc, C2RepXc, C2fBi, C2x, C2fSA, C2el):
                     args.insert(2, n)  # number of repeats
                     n = 1
 
