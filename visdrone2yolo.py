@@ -39,4 +39,4 @@ if __name__ == '__main__':
     arg = parser.parse_args()
     # Convert
     for d in 'VisDrone2019-DET-train', 'VisDrone2019-DET-val', 'VisDrone2019-DET-test-dev':
-        visdrone2yolo(arg.root_dir / d)  # convert VisDrone annotations to YOLO labels
+        visdrone2yolo(Path(arg.root_dir) / d)  # convert VisDrone annotations to YOLO labels
