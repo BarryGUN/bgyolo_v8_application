@@ -304,10 +304,12 @@ class Bottleneck(nn.Module):
         """'forward()' applies the YOLOv5 FPN to input data."""
         return x + self.cv2(self.cv1(x)) if self.add else self.cv2(self.cv1(x))
 
+
 class BottleneckT(nn.Module):
     """Standard bottleneck."""
 
-    def __init__(self, c1, c2, shortcut=True, g=1, k=(3, 3, 3), e=0.5):  # ch_in, ch_out, shortcut, groups, kernels, expand
+    def __init__(self, c1, c2, shortcut=True, g=1, k=(3, 3, 3),
+                 e=0.5):  # ch_in, ch_out, shortcut, groups, kernels, expand
         super().__init__()
         c_ = int(c2 * e)  # hidden channels
         self.cv1 = Conv(c1, c_, k[0], 1)
@@ -681,6 +683,7 @@ class BiConcat(nn.Module):
             x[i] = weight[i] * x[i]
         return torch.cat(x, self.d)
 
+
 class BinConcat(nn.Module):
 
     def __init__(self, n, out, dimension=1):
@@ -699,6 +702,7 @@ class BinConcat(nn.Module):
             x[i] = weight[i] * x[i]
         return self.bn(torch.cat(x, self.d))
 
+
 class BibnConcat(nn.Module):
 
     def __init__(self, n, out, dimension=1):
@@ -716,6 +720,23 @@ class BibnConcat(nn.Module):
         for i in range(self.n):
             x[i] = self.w[i] * x[i]
         return self.bn(torch.cat(x, self.d))
+
+
+class TranConcat(nn.Module):
+
+    def __init__(self, dim, dimension=1):
+        super(TranConcat, self).__init__()
+        self.d = dimension
+        self.a = DWConv(dim, dim, k=3, s=1)
+        self.v = nn.Identity()
+        self.linear = Conv(dim, dim, k=1, s=1)
+
+    def forward(self, x):
+        x = torch.cat(x, self.d)
+        a = self.a(x)
+        out = a * self.v(x)
+        return self.linear(out)
+
 
 class C2fBi(nn.Module):
     """Faster Implementation of CSP Bottleneck with 2 convolutions."""
@@ -758,6 +779,7 @@ class C2x(nn.Module):
         y = [self.cv1(x), self.cv2(x)]
         y.extend(m(y[-1]) for m in self.m)
         return self.cv3(torch.cat(y, dim=1))
+
 
 class C2fSA(nn.Module):
     """Faster Implementation of CSP Bottleneck with 2 convolutions."""
@@ -806,6 +828,7 @@ class C2el(nn.Module):
         y.extend(m(y[-1]) for m in self.m)
         return self.cv2(torch.cat(y, 1))
 
+
 class C2ft(nn.Module):
     """Faster Implementation of CSP Bottleneck with 2 convolutions."""
 
@@ -815,7 +838,8 @@ class C2ft(nn.Module):
         self.cv1 = Conv(c1, 2 * self.c, 1, 1)
         self.cv2 = Conv((2 + n) * self.c, c2, 1)  # optional act=FReLU(c2)
         # self.attention = SpatialAttention(kernel_size=3)  # or SpatialAttention()
-        self.m = nn.ModuleList(BottleneckT(self.c, self.c, shortcut, g, k=((3, 3), (3, 3), (3, 3)), e=1.0) for _ in range(n))
+        self.m = nn.ModuleList(
+            BottleneckT(self.c, self.c, shortcut, g, k=((3, 3), (3, 3), (3, 3)), e=1.0) for _ in range(n))
 
     def forward(self, x):
         """Forward pass through C2f layer."""
