@@ -141,19 +141,16 @@ class SPPFCSP(nn.Module):
     def __init__(self, c1, c2, k=5):  # equivalent to SPP(k=(5, 9, 13))
         super().__init__()
         c_ = c2 // 2  # hidden channels
-        self.cv1 = Conv(c1, c_, 1, 1)
         self.cv2 = Conv(c1, c_, 1, 1)
-        self.cv3 = Conv(c_ * 4, c_, 1, 1)
-        self.m = nn.MaxPool2d(kernel_size=k, stride=1, padding=k // 2)
-        self.cv4 = Conv(c_, c_, 3, 1)
-        self.cv5 = Conv(c_ * 2, c2, 1, 1)
-        # self.m = SoftPool2d(kernel_size=k, stride=1, padding=k // 2)
+        self.m = SPPF(c1, c_, k=k)
+        self.cv3 = Conv(c_, c_, 3, 1)
+
+        self.cv4 = Conv(int(c_ * 2), c2, 1, 1)
 
     def forward(self, x):
-        x_1 = self.cv1(x)
-        y1 = self.m(x_1)
-        y2 = self.m(y1)
-        return self.cv5(torch.cat((self.cv4(self.cv3(torch.cat((x_1, y1, y2, self.m(y2)), 1))), self.cv2(x)), 1))
+        x2 = self.cv2(x)
+        x = self.cv3(self.m(x))
+        return self.cv4(torch.cat((x, x2), dim=1))
 
 
 class C1(nn.Module):
