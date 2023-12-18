@@ -221,8 +221,6 @@ def bbox_iou_tal(box1,
     # IoU
     iou = inter / union
 
-    if iou == 0:
-        return 0
     if CIoU or DIoU or GIoU or EIoU:
         cw = b1_x2.maximum(b2_x2) - b1_x1.minimum(b2_x1)  # convex (smallest enclosing box) width
         ch = b1_y2.maximum(b2_y2) - b1_y1.minimum(b2_y1)  # convex height
