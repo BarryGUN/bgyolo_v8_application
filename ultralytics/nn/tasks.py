@@ -12,7 +12,7 @@ from ultralytics.nn.modules import (AIFI, C1, C2, C3, C3TR, SPP, SPPF, Bottlenec
                                     Focus, GhostBottleneck, GhostConv, HGBlock, HGStem, Pose, RepC3, RepConv,
                                     RTDETRDecoder, Segment)
 from ultralytics.nn.modules.block import MS2, MS2b, C2RepX, SplitMP, SPPFCSP, MS2d, MS2e, C2d, C2sc, C2RepXc, BiFuse, \
-    BiConcat, C2fBi, BinConcat, C2x, BibnConcat, C2fSA, C2el, C2ft, TranConcat
+    BiConcat, C2fBi, BinConcat, C2x, BibnConcat, C2fSA, C2el, C2ft, TranConcat, TranQKVConcat
 from ultralytics.nn.modules.conv import RepXConv
 from ultralytics.utils import DEFAULT_CFG_DICT, DEFAULT_CFG_KEYS, LOGGER, colorstr, emojis, yaml_load
 from ultralytics.utils.checks import check_requirements, check_suffix, check_yaml
@@ -695,10 +695,10 @@ def parse_model(d, ch, verbose=True):  # model_dict, input_channels(3)
             args = [ch[f]]
         elif m is Concat:
             c2 = sum(ch[x] for x in f)
-        elif m in [BiConcat, BinConcat, BibnConcat, TranConcat]:
+        elif m in [BiConcat, BinConcat, BibnConcat, TranConcat, TranQKVConcat]:
             c2 = sum(ch[x] for x in f)
-            if m in [BinConcat, BibnConcat, TranConcat]:
-                if m in (TranConcat,):
+            if m in [BinConcat, BibnConcat, TranConcat, TranQKVConcat]:
+                if m in (TranConcat, TranQKVConcat):
                     args = [c2,  args[0]]
                 else:
                     args = [len(f), c2, args[0]]

@@ -628,9 +628,6 @@ class BiFuse(nn.Module):
 
     def __init__(self, c1_list, c2):
         super(BiFuse, self).__init__()
-        # 设置可学习参数 nn.Parameter的作用是：将一个不可训练的类型Tensor转换成可以训练的类型parameter
-        # 并且会向宿主模型注册该参数 成为其一部分 即model.parameters()会包含这个parameter
-        # 从而在参数优化的时候可以自动一起优化
         self.n = len(c1_list)
         self.w = nn.Parameter(torch.ones(self.n, dtype=torch.float32), requires_grad=True)
         self.epsilon = 0.0001
@@ -733,6 +730,25 @@ class TranConcat(nn.Module):
         a = self.a(x)
         out = a * self.v(x)
         return self.linear(out)
+
+
+class TranQKVConcat(nn.Module):
+    def __init__(self, dim, dimension=1):
+        super(TranQKVConcat, self).__init__()
+        self.d = dimension
+        self.k = DWConv(dim, dim, k=3, s=1)
+        self.q = nn.Sequential(*(DWConv(dim, dim, k=3, s=1) for _ in range(2)))
+        self.v = nn.Identity()
+        self.linear = Conv(dim, dim, k=1, s=1)
+        self.bn = nn.BatchNorm2d(dim)
+
+    def forward(self, x):
+        x = torch.cat(x, self.d)
+        q = self.q(x)
+        k = self.k(x)
+        x = self.v(x)
+
+        return self.linear(self.bn(q * k) * x)
 
 
 class C2fBi(nn.Module):
