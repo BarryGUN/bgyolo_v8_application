@@ -748,7 +748,8 @@ class TranQKVConcat(nn.Module):
         k = self.k(x)
         x = self.v(x)
 
-        return self.linear(self.bn(q * k) * x)
+        # return self.linear(self.bn(q * k) * x)
+        return self.linear(torch.softmax(q * k, dim=1) * x)
 
 
 class C2fBi(nn.Module):
