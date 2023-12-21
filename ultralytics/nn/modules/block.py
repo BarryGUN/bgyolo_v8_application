@@ -742,6 +742,7 @@ class TranQKVConcat(nn.Module):
         self.v = nn.Identity()
         self.linear = Conv(dim, dim, k=1, s=1)
         self.bn = nn.BatchNorm2d(dim)
+        self.bn_2 = nn.BatchNorm2d(dim)
 
     def forward(self, x):
         x = torch.cat(x, self.d)
@@ -749,10 +750,10 @@ class TranQKVConcat(nn.Module):
         k = self.k(x)
         x = self.v(x)
 
-        # return self.linear(self.bn(q * k) * x)
+        return self.linear(self.bn_2(self.bn(q * k + 0.00001) * x))
         # return self.linear(torch.softmax(q * k, dim=1) * x)
         # return self.linear(q * k * x)
-        return self.linear(torch.softmax(q * k / math.sqrt(x.shape[1]), dim=1) * x)
+        # return self.linear(torch.softmax(q * k / math.sqrt(x.shape[1]), dim=1) * x)
 
 
 class C2fBi(nn.Module):
