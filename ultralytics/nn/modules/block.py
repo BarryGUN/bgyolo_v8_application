@@ -750,7 +750,7 @@ class TranQKVConcat(nn.Module):
         k = self.k(x)
         x = self.v(x)
 
-        return self.linear(self.bn_2(self.bn(q * k + 0.00001) * x))
+        return self.linear(self.bn(q * k + 0.00001) * x)
         # return self.linear(torch.softmax(q * k, dim=1) * x)
         # return self.linear(q * k * x)
         # return self.linear(torch.softmax(q * k / math.sqrt(x.shape[1]), dim=1) * x)
