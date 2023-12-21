@@ -32,10 +32,10 @@ class COCOValidator:
 
         indexes = [
             ('AP', 'area=all', 'IoU=50:95'), ('AP', 'area=all', 'IoU=50'),
-            ('AP', 'area=all', 'IoU=75'), ('AP', 'area=all', 'IoU=50:95'),
+            ('AP', 'area=all', 'IoU=75'), ('AP', 'area=small', 'IoU=50:95'),
             ('AP', 'area=medium', 'IoU=50:95'), ('AP', 'area=large', 'IoU=50:95'),
             ('AR', 'area=all', 'IoU=50:95'), ('AR', 'area=all', 'IoU=50'),
-            ('AR', 'area=all', 'IoU=75'), ('AR', 'area=all', 'IoU=50:95'),
+            ('AR', 'area=all', 'IoU=75'), ('AR', 'area=small', 'IoU=50:95'),
             ('AR', 'area=medium', 'IoU=50:95'), ('AR', 'area=large', 'IoU=50:95'),
         ]
 
