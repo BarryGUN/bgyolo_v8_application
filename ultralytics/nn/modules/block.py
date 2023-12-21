@@ -746,11 +746,7 @@ class TranQKVConcat(nn.Module):
 
     def forward(self, x):
         x = torch.cat(x, self.d)
-        q = self.q(x)
-        k = self.k(x)
-        x = self.v(x)
-
-        return self.linear(self.bn(q * k + 0.00001) * x)
+        return self.linear(self.bn(self.q(x) * self.k(x) + 0.00001) * self.v(x))
         # return self.linear(torch.softmax(q * k, dim=1) * x)
         # return self.linear(q * k * x)
         # return self.linear(torch.softmax(q * k / math.sqrt(x.shape[1]), dim=1) * x)
