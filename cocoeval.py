@@ -47,6 +47,8 @@ class COCOValidator:
 
                  ]
         indexes = pd.MultiIndex.from_tuples(indexes)
+        if not os.path.exists(folder):
+            os.makedirs(folder)
         pd.DataFrame(data=values, index=indexes).T.to_csv(os.path.join(folder, f'{name}.csv'))
 
     def eval(self):
