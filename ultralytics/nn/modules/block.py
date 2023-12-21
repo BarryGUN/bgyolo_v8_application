@@ -2,6 +2,7 @@
 """
 Block modules
 """
+import math
 import warnings
 
 import torch
@@ -749,7 +750,9 @@ class TranQKVConcat(nn.Module):
         x = self.v(x)
 
         # return self.linear(self.bn(q * k) * x)
-        return self.linear(torch.softmax(q * k, dim=1) * x)
+        # return self.linear(torch.softmax(q * k, dim=1) * x)
+        return self.linear(q * k * x)
+        # return self.linear(torch.softmax(q * k / math.sqrt(x.shape[1]), dim=1) * x)
 
 
 class C2fBi(nn.Module):
