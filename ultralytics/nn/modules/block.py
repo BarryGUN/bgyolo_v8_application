@@ -154,6 +154,27 @@ class SPPFCSP(nn.Module):
         return self.cv4(torch.cat((x, x2), dim=1))
 
 
+class SPPFCSPC(nn.Module):
+    # Spatial Pyramid Pooling - Fast (SPPF) layer for YOLOv5 by Glenn Jocher
+    def __init__(self, c1, c2, k=5):  # equivalent to SPP(k=(5, 9, 13))
+        super().__init__()
+        c_ = c2 // 2  # hidden channels
+        self.cv2 = Conv(c1, c_, 1, 1)
+        self.m = SPPF(c1, c_, k=k)
+        self.cv3 = Conv(c_, c_, 3, 1)
+        self.cv4 = Conv(int(c_ * 3), c2, 1, 1)
+
+    def forward(self, x):
+        cv_list = []
+        x2 = self.cv2(x)
+        cv_list.append(x2)
+        x = self.m(x)
+        cv_list.append(x)
+        x = self.cv3(x)
+        cv_list.append(x)
+        return self.cv4(torch.cat(cv_list, dim=1))
+
+
 class C1(nn.Module):
     """CSP Bottleneck with 1 convolution."""
 
