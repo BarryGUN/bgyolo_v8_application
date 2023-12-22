@@ -136,38 +136,16 @@ class SPPF(nn.Module):
         y2 = self.m(y1)
         return self.cv2(torch.cat((x, y1, y2, self.m(y2)), 1))
 
-
-class SPPFCSP(nn.Module):
-    # Spatial Pyramid Pooling - Fast (SPPF) layer for YOLOv5 by Glenn Jocher
+class SPPFDWC(nn.Module):
     def __init__(self, c1, c2, k=5):  # equivalent to SPP(k=(5, 9, 13))
         super().__init__()
-        c_ = c2 // 2  # hidden channels
-        self.cv2 = Conv(c1, c_, 1, 1)
-        self.m = SPPF(c1, c_, k=k)
-        self.cv3 = Conv(c_, c_, 3, 1)
-
-        self.cv4 = Conv(int(c_ * 2), c2, 1, 1)
+        self.cv1 = DWConv(c2, c2, k=3, s=1)
+        self.m = SPPF(c1, c2, k=k)
 
     def forward(self, x):
-        x2 = self.cv2(x)
-        x = self.cv3(self.m(x))
-        return self.cv4(torch.cat((x, x2), dim=1))
+        """Forward pass through Ghost Convolution block."""
+        return self.cv1(self.m(x))
 
-class SPPCSP(nn.Module):
-    # Spatial Pyramid Pooling - Fast (SPPF) layer for YOLOv5 by Glenn Jocher
-    def __init__(self, c1, c2, k=(5, 9, 13)):  # equivalent to SPP(k=(5, 9, 13))
-        super().__init__()
-        c_ = c2 // 2  # hidden channels
-        self.cv2 = Conv(c1, c_, 1, 1)
-        self.m = SPP(c1, c_, k=k)
-        self.cv3 = Conv(c_, c_, 3, 1)
-
-        self.cv4 = Conv(int(c_ * 2), c2, 1, 1)
-
-    def forward(self, x):
-        x2 = self.cv2(x)
-        x = self.cv3(self.m(x))
-        return self.cv4(torch.cat((x, x2), dim=1))
 
 class SPPFCSPC(nn.Module):
     # Spatial Pyramid Pooling - Fast (SPPF) layer for YOLOv5 by Glenn Jocher
