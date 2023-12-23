@@ -639,98 +639,6 @@ class SplitMP(nn.Module):
         return self.cv3(torch.cat(cat_list, dim=1))
 
 
-class BiFuse(nn.Module):
-
-    def __init__(self, c1_list, c2):
-        super(BiFuse, self).__init__()
-        self.n = len(c1_list)
-        self.w = nn.Parameter(torch.ones(self.n, dtype=torch.float32), requires_grad=True)
-        self.epsilon = 0.0001
-        # c1_ = int(sum(c1_list) / self.n)
-        self.c1_max = max(c1_list)
-        # self.conv = nn.Conv2d(self.c1_max, c2, kernel_size=1, stride=1, padding=0)
-        # self.act = nn.SiLU()
-        self.conv = Conv(self.c1_max, c2, k=1, s=1)
-        align_c = []
-        self.align_index = []
-        for i, c in enumerate(c1_list):
-            if c < self.c1_max:
-                align_c.append(c)
-                self.align_index.append(i)
-        self.align_conv = nn.ModuleList(
-            Conv(i, self.c1_max, k=1, s=1)
-            for i in align_c)
-
-    def forward(self, x):
-        # x = list(torch.cat(x, dim=1).chunk(self.n, 1))       # x = x
-        y = x
-        for i, xi in enumerate(self.align_index):
-            y[xi] = self.align_conv[i](y[xi])
-        w = self.w
-        weight = w / (torch.sum(w, dim=0) + self.epsilon)
-        out = 0
-        for i in range(self.n):
-            out += weight[i] * y[i]
-        # return self.conv(self.act(out))
-        return self.conv(out)
-
-
-class BiConcat(nn.Module):
-
-    def __init__(self, n, dimension=1):
-        super(BiConcat, self).__init__()
-        self.d = dimension
-        self.n = n
-        self.w = nn.Parameter(torch.ones(self.n, dtype=torch.float32), requires_grad=True)
-        self.epsilon = 0.0001
-
-    def forward(self, x):
-        w = self.w
-        weight = w / (torch.sum(w, dim=0) + self.epsilon)  # 将权重进行归一化
-        # Fast normalized fusion
-        for i in range(self.n):
-            x[i] = weight[i] * x[i]
-        return torch.cat(x, self.d)
-
-
-class BinConcat(nn.Module):
-
-    def __init__(self, n, out, dimension=1):
-        super(BinConcat, self).__init__()
-        self.d = dimension
-        self.n = n
-        self.w = nn.Parameter(torch.ones(self.n, dtype=torch.float32), requires_grad=True)
-        self.epsilon = 0.0001
-        self.bn = nn.BatchNorm2d(out)
-
-    def forward(self, x):
-        w = self.w
-        weight = w / (torch.sum(w, dim=0) + self.epsilon)  # 将权重进行归一化
-        # Fast normalized fusion
-        for i in range(self.n):
-            x[i] = weight[i] * x[i]
-        return self.bn(torch.cat(x, self.d))
-
-
-class BibnConcat(nn.Module):
-
-    def __init__(self, n, out, dimension=1):
-        super(BibnConcat, self).__init__()
-        self.d = dimension
-        self.n = n
-        self.w = nn.Parameter(torch.ones(self.n, dtype=torch.float32), requires_grad=True)
-        # self.epsilon = 0.0001
-        self.bn = nn.BatchNorm2d(out)
-
-    def forward(self, x):
-        # w = self.w
-        # weight = w / (torch.sum(w, dim=0) + self.epsilon)  # 将权重进行归一化
-        # Fast normalized fusion
-        for i in range(self.n):
-            x[i] = self.w[i] * x[i]
-        return self.bn(torch.cat(x, self.d))
-
-
 class TranConcat(nn.Module):
 
     def __init__(self, dim, dimension=1):
@@ -748,7 +656,7 @@ class TranConcat(nn.Module):
 
 
 class TranQKVConcat(nn.Module):
-    def __init__(self, dim, dimension=1):
+    def __init__(self, dim, dimension=1, eps=1e-5):
         super(TranQKVConcat, self).__init__()
         self.d = dimension
         self.k = DWConv(dim, dim, k=3, s=1)
@@ -756,38 +664,16 @@ class TranQKVConcat(nn.Module):
         self.v = nn.Identity()
         self.linear = Conv(dim, dim, k=1, s=1)
         self.bn = nn.BatchNorm2d(dim)
-        self.bn_2 = nn.BatchNorm2d(dim)
+        self.eps = eps
 
     def forward(self, x):
         x = torch.cat(x, self.d)
-        return self.linear(self.bn(self.q(x) * self.k(x) + 0.00001) * self.v(x))
+        return self.linear(self.bn(
+            (self.q(x) + self.eps) * (self.k(x) + self.eps)
+        ) * (self.v(x) + self.eps))
         # return self.linear(torch.softmax(q * k, dim=1) * x)
         # return self.linear(q * k * x)
         # return self.linear(torch.softmax(q * k / math.sqrt(x.shape[1]), dim=1) * x)
-
-
-class C2fBi(nn.Module):
-    """Faster Implementation of CSP Bottleneck with 2 convolutions."""
-
-    def __init__(self, c1, c2, n=1, shortcut=False, g=1, e=0.5):  # ch_in, ch_out, number, shortcut, groups, expansion
-        super().__init__()
-        self.c = int(c2 * e)  # hidden channels
-        self.cv1 = Conv(c1, 2 * self.c, 1, 1)
-        self.cv2 = Conv((2 + n) * self.c, c2, 1)  # optional act=FReLU(c2)
-        self.m = nn.ModuleList(Bottleneck(self.c, self.c, shortcut, g, k=((3, 3), (3, 3)), e=1.0) for _ in range(n))
-        self.bcat = BiConcat(2 + n, dimension=1)
-
-    def forward(self, x):
-        """Forward pass through C2f layer."""
-        y = list(self.cv1(x).chunk(2, 1))
-        y.extend(m(y[-1]) for m in self.m)
-        return self.cv2(self.bcat(y))
-
-    def forward_split(self, x):
-        """Forward pass using split() instead of chunk()."""
-        y = list(self.cv1(x).split((self.c, self.c), 1))
-        y.extend(m(y[-1]) for m in self.m)
-        return self.cv2(self.bcat(y))
 
 
 class C2x(nn.Module):
