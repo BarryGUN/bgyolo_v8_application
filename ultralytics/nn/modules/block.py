@@ -662,7 +662,8 @@ class TranQKVConcat(nn.Module):
         self.k = DWConv(dim, dim, k=3, s=1)
         self.q = nn.Sequential(*(DWConv(dim, dim, k=3, s=1) for _ in range(2)))
         self.v = nn.Identity()
-        self.linear = Conv(dim, dim, k=1, s=1)
+        # self.linear = Conv(dim, dim, k=1, s=1)
+        self.linear = nn.Conv2d(dim, dim, kernel_size=1, stride=1, padding=0, bias=False)
         self.bn = nn.BatchNorm2d(dim)
         self.eps = eps
 
