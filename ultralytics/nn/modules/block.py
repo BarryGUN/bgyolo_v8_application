@@ -662,16 +662,19 @@ class TranQKVConcat(nn.Module):
         self.k = DWConv(dim, dim, k=3, s=1)
         self.q = nn.Sequential(*(DWConv(dim, dim, k=3, s=1) for _ in range(2)))
         self.v = nn.Identity()
-        # self.linear = Conv(dim, dim, k=1, s=1)
-        self.linear = nn.Conv2d(dim, dim, kernel_size=1, stride=1, padding=0, bias=False)
+        self.linear = Conv(dim, dim, k=1, s=1)
         self.bn = nn.BatchNorm2d(dim)
+        self.act = nn.SiLU()
         self.eps = eps
 
     def forward(self, x):
         x = torch.cat(x, self.d)
-        return self.linear(self.bn(
+        # return self.linear(self.bn(
+        #     (self.q(x) + self.eps) * (self.k(x) + self.eps)
+        # ) * (self.v(x) + self.eps))
+        return self.linear(self.act(self.bn(
             (self.q(x) + self.eps) * (self.k(x) + self.eps)
-        ) * (self.v(x) + self.eps))
+        )) * (self.v(x) + self.eps))
         # return self.linear(self.bn(
         #     (self.q(x) * self.k(x) + self.eps)
         # ) * self.v(x) + self.eps)
