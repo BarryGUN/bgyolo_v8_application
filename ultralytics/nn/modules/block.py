@@ -664,17 +664,20 @@ class TranQKVConcat(nn.Module):
         self.v = nn.Identity()
         self.linear = Conv(dim, dim, k=1, s=1)
         self.bn = nn.BatchNorm2d(dim)
-        self.act = nn.SiLU()
+        # self.act = nn.SiLU()
         self.eps = eps
 
     def forward(self, x):
         x = torch.cat(x, self.d)
+        return x + self.linear(self.bn(
+            (self.q(x) + self.eps) * (self.k(x) + self.eps)
+        ) * (self.v(x) + self.eps))
         # return self.linear(self.bn(
         #     (self.q(x) + self.eps) * (self.k(x) + self.eps)
         # ) * (self.v(x) + self.eps))
-        return self.linear(self.act(self.bn(
-            (self.q(x) + self.eps) * (self.k(x) + self.eps)
-        )) * (self.v(x) + self.eps))
+        # return self.linear(self.act(self.bn(
+        #     (self.q(x) + self.eps) * (self.k(x) + self.eps)
+        # )) * (self.v(x) + self.eps))
         # return self.linear(self.bn(
         #     (self.q(x) * self.k(x) + self.eps)
         # ) * self.v(x) + self.eps)
