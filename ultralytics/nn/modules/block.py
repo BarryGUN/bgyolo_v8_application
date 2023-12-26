@@ -673,10 +673,11 @@ class TranQKVConcat(nn.Module):
         # return x + self.linear(self.bn(
         #     (self.q(x) + self.eps) * (self.k(x) + self.eps)
         # ) * (self.v(x) + self.eps))
-
-        return self.linear(self.bn(
+        y = self.linear(self.bn(
             (self.q(x) + self.eps) * (self.k(x) + self.eps)
         ) * (self.v(x) + self.eps))
+        torch.set_flush_denormal(True)
+        return y
         # return self.linear(self.act(self.bn(
         #     (self.q(x) + self.eps) * (self.k(x) + self.eps)
         # )) * (self.v(x) + self.eps))
