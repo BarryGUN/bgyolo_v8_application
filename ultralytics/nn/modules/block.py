@@ -656,7 +656,7 @@ class TranConcat(nn.Module):
 
 
 class TranQKVConcat(nn.Module):
-    def __init__(self, dim, dimension=1, eps=1e-5):
+    def __init__(self, dim, dimension=1, eps=1e-4):
         super(TranQKVConcat, self).__init__()
         self.d = dimension
         self.k = DWConv(dim, dim, k=3, s=1)
@@ -669,12 +669,12 @@ class TranQKVConcat(nn.Module):
 
     def forward(self, x):
         x = torch.cat(x, self.d)
-        return x + self.linear(self.bn(
-            (self.q(x) + self.eps) * (self.k(x) + self.eps)
-        ) * (self.v(x) + self.eps))
-        # return self.linear(self.bn(
+        # return x + self.linear(self.bn(
         #     (self.q(x) + self.eps) * (self.k(x) + self.eps)
         # ) * (self.v(x) + self.eps))
+        return self.linear(self.bn(
+            (self.q(x) + self.eps) * (self.k(x) + self.eps)
+        ) * (self.v(x) + self.eps))
         # return self.linear(self.act(self.bn(
         #     (self.q(x) + self.eps) * (self.k(x) + self.eps)
         # )) * (self.v(x) + self.eps))

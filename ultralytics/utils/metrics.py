@@ -15,33 +15,6 @@ from ultralytics.utils import LOGGER, SimpleClass, TryExcept, plt_settings
 OKS_SIGMA = np.array([.26, .25, .25, .35, .35, .79, .79, .72, .72, .62, .62, 1.07, 1.07, .87, .87, .89, .89]) / 10.0
 
 
-class WIoU_Scale:
-    iou_mean = 1.
-    _momentum = 1 - 0.5 ** (1 / 7000)
-    _is_train = True
-    gamma = 1.9
-    delta = 3
-
-    def __init__(self, iou, batch_size, epoch, gamma=1.9, delta=3):
-        self.iou = iou
-        self.delta = delta
-        self.gamma = gamma
-        epoch += 1
-        self._update(self, batch_size, epoch)
-
-    @classmethod
-    def _update(cls, self, batch_size, epoch):
-        if cls._is_train:
-            cls._momentum = 1 - 0.5 ** (1 / batch_size * epoch)
-            cls.iou_mean = (1 - cls._momentum) * cls.iou_mean + \
-                           cls._momentum * self.iou.detach().mean().item()
-
-    @classmethod
-    def _scaled_loss(cls, self):
-        beta = self.iou.detach() / self.iou_mean
-        alpha = cls.delta * torch.pow(cls.gamma, beta - cls.delta)
-        return beta / alpha
-
 
 def bbox_ioa(box1, box2, iou=False, eps=1e-7):
     """
@@ -105,7 +78,8 @@ def bbox_iou(box1,
              DIoU=False,
              CIoU=False,
              EIoU=False,
-             eps=1e-7,
+             # eps=1e-7,
+             eps=1e-4,
 
              ):
     """
