@@ -78,8 +78,8 @@ def bbox_iou(box1,
              DIoU=False,
              CIoU=False,
              EIoU=False,
-             # eps=1e-7,
-             eps=1e-4,
+             eps=1e-7,
+
 
              ):
     """
