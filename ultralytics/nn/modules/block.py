@@ -668,15 +668,17 @@ class TranQKVConcat(nn.Module):
         self.eps = eps
 
     def forward(self, x):
-        torch.set_flush_denormal(False)
         x = torch.cat(x, self.d)
         # return x + self.linear(self.bn(
         #     (self.q(x) + self.eps) * (self.k(x) + self.eps)
         # ) * (self.v(x) + self.eps))
+        # y = self.linear(self.bn(
+        #     (self.q(x) + self.eps) * (self.k(x) + self.eps)
+        # ) * (self.v(x) + self.eps))
+
         y = self.linear(self.bn(
-            (self.q(x) + self.eps) * (self.k(x) + self.eps)
+            (torch.matmul(self.q(x), self.k(x)))
         ) * (self.v(x) + self.eps))
-        torch.set_flush_denormal(True)
         return y
         # return self.linear(self.act(self.bn(
         #     (self.q(x) + self.eps) * (self.k(x) + self.eps)
