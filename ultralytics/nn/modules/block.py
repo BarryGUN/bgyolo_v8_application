@@ -660,7 +660,7 @@ class TranQKVConcat(nn.Module):
         super(TranQKVConcat, self).__init__()
         self.d = dimension
         self.k = DWConv(dim, dim, k=3, s=1)
-        self.q = DWConv(dim, dim, k=3, s=1)
+        self.q = nn.Sequential(*(DWConv(dim, dim, k=3, s=1) for _ in range(2)))
         self.v = nn.Identity()
         self.linear = Conv(dim, dim, k=1, s=1)
         self.innorm_1 = nn.InstanceNorm2d(dim)
