@@ -10,7 +10,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from .conv import Conv, DWConv, GhostConv, LightConv, RepConv, RepXConv, DeformConv2d, CBAM, SpatialAttention, \
-    ChannelAttention
+    ChannelAttention, CIS
 from .transformer import TransformerBlock
 
 __all__ = ('DFL', 'HGBlock', 'HGStem', 'SPP', 'SPPF', 'C1', 'C2', 'C3', 'C2f', 'C3x', 'C3TR', 'C3Ghost',
@@ -135,16 +135,6 @@ class SPPF(nn.Module):
         y1 = self.m(x)
         y2 = self.m(y1)
         return self.cv2(torch.cat((x, y1, y2, self.m(y2)), 1))
-
-class SPPFDWC(nn.Module):
-    def __init__(self, c1, c2, k=5):  # equivalent to SPP(k=(5, 9, 13))
-        super().__init__()
-        self.cv1 = DWConv(c2, c2, k=3, s=1)
-        self.m = SPPF(c1, c2, k=k)
-
-    def forward(self, x):
-        """Forward pass through Ghost Convolution block."""
-        return self.cv1(self.m(x))
 
 
 class SPPFCSPC(nn.Module):
@@ -317,23 +307,6 @@ class Bottleneck(nn.Module):
         return x + self.cv2(self.cv1(x)) if self.add else self.cv2(self.cv1(x))
 
 
-class BottleneckT(nn.Module):
-    """Standard bottleneck."""
-
-    def __init__(self, c1, c2, shortcut=True, g=1, k=(3, 3, 3),
-                 e=0.5):  # ch_in, ch_out, shortcut, groups, kernels, expand
-        super().__init__()
-        c_ = int(c2 * e)  # hidden channels
-        self.cv1 = Conv(c1, c_, k[0], 1)
-        self.cv2 = Conv(c_, c_, k[1], 1, g=g)
-        self.cv3 = Conv(c_, c2, k[2], 1)
-        self.add = shortcut and c1 == c2
-
-    def forward(self, x):
-        """'forward()' applies the YOLOv5 FPN to input data."""
-        return x + self.cv3(self.cv2(self.cv1(x))) if self.add else self.cv3(self.cv2(self.cv1(x)))
-
-
 class LightBottleneck(nn.Module):
     """Standard bottleneck."""
 
@@ -483,93 +456,6 @@ class MS2b(nn.Module):
         return self.cv2(torch.cat(y, dim=1))
 
 
-class MS2d(nn.Module):
-
-    def __init__(self, c1, c2, n=1, merge=False, e=0.5):  # ch_in, ch_out, number, shortcut, groups, expansion
-        super().__init__()
-        c_2 = int(c2 * e)
-        self.slices = n + 1
-        self.merge = merge
-        c_1 = c_2 * self.slices  # hidden channels
-
-        self.cv1 = Conv(c1, c_1, 1, 1)
-        self.bottleneck_series = nn.ModuleList(
-            (CDCBottleneck(c_2, c_2, shortcut=False, e=1) for _ in range(n))
-        )
-        self.cv2 = Conv(c_1, c2, 1, 1)
-
-    def forward(self, x):
-        y = list(self.cv1(x).chunk(self.slices, 1))
-        for i, m in enumerate(self.bottleneck_series):
-            if self.merge:
-                y[i + 1] = m(y[i + 1]) + y[i]
-            else:
-                y[i + 1] = m(y[i + 1])
-
-        return self.cv2(torch.cat(y, dim=1))
-
-
-class MS2e(nn.Module):
-
-    def __init__(self, c1, c2, n=1, merge=False, e=0.5):  # ch_in, ch_out, number, shortcut, groups, expansion
-        super().__init__()
-        c_2 = int(c2 * e)
-        self.merge = merge
-
-        self.cv1 = Conv(c1, c2, 1, 1)
-        self.bottleneck_series = nn.ModuleList(
-            (CDCBottleneck(c_2, c_2, shortcut=False, e=1) for _ in range(n))
-        )
-        self.cv2 = Conv(int(n + 2) * c_2, c2, 1, 1)
-
-    def forward(self, x):
-        y = list(self.cv1(x).chunk(2, 1))
-        for i, m in enumerate(self.bottleneck_series):
-            if self.merge:
-                y.append(m(y[-1]) + y[0])
-            else:
-                y.append(m(y[-1]))
-
-        return self.cv2(torch.cat(y, dim=1))
-
-
-class C2d(nn.Module):
-    def __init__(self, c1, c2, n=1, shortcut=False, e=0.5):  # ch_in, ch_out, number, shortcut, groups, expansion
-        super().__init__()
-        c_2 = int(c2 * e)
-        self.shortcut = shortcut
-
-        self.cv1 = Conv(c1, c2, 1, 1)
-        self.bottleneck_series = nn.ModuleList(
-            CDCBottleneck(c_2, c_2, shortcut=shortcut, e=1) for _ in range(n)
-        )
-        self.cv2 = Conv((2 + n) * c_2, c2, 1)
-
-    def forward(self, x):
-        y = list(self.cv1(x).chunk(2, 1))
-        y.extend(m(y[-1]) for m in self.bottleneck_series)
-        return self.cv2(torch.cat(y, 1))
-
-
-class C2sc(nn.Module):
-    def __init__(self, c1, c2, n=1, shortcut=False, e=0.5):  # ch_in, ch_out, number, shortcut, groups, expansion
-        super().__init__()
-        self.c = int(c2 * e)
-        c_ = (2 + n) * self.c
-        self.shortcut = shortcut
-        self.cv1 = Conv(c1, c2, 1, 1)
-        self.bottleneck_series = nn.ModuleList(
-            RTMDetBottleneck(self.c, self.c, shortcut=shortcut, e=1) for _ in range(n)
-        )
-        self.cv2 = Conv(c_, c2, 1)
-        self.ca = ChannelAttention(c_)
-
-    def forward(self, x):
-        y = list(self.cv1(x).chunk(2, 1))
-        y.extend(m(y[-1]) for m in self.bottleneck_series)
-        return self.cv2(self.ca(torch.cat(y, 1)))
-
-
 class C2RepX(nn.Module):
     """Faster Implementation of CSP Bottleneck with 2 convolutions."""
 
@@ -620,23 +506,6 @@ class C2RepXc(nn.Module):
         y = list(self.cv1(x).split((self.c, self.c), 1))
         y.extend(m(y[-1]) for m in self.m)
         return self.cv2(torch.cat(y, 1))
-
-
-class SplitMP(nn.Module):
-
-    def __init__(self, in_c, out_c, k=2):
-        super().__init__()
-        c_ = int(out_c * 0.5)
-        self.cv1 = Conv(in_c, out_c, k=1, s=1)
-        self.m = nn.MaxPool2d(kernel_size=k, stride=k)
-        self.cv2 = Conv(c_, c_, k=3, s=2)
-        self.cv3 = Conv(int(c_ * 2), out_c, k=1, s=1)
-
-    def forward(self, x):
-        cat_list = list(self.cv1(x).chunk(2, 1))
-        cat_list[0] = self.cv2(cat_list[0])
-        cat_list[1] = self.m(cat_list[1])
-        return self.cv3(torch.cat(cat_list, dim=1))
 
 
 class TranConcat(nn.Module):
@@ -712,65 +581,16 @@ class C2x(nn.Module):
         return self.cv3(torch.cat(y, dim=1))
 
 
-class C2fSA(nn.Module):
+
+class C2fIS(nn.Module):
     """Faster Implementation of CSP Bottleneck with 2 convolutions."""
 
     def __init__(self, c1, c2, n=1, shortcut=False, g=1, e=0.5):  # ch_in, ch_out, number, shortcut, groups, expansion
         super().__init__()
         self.c = int(c2 * e)  # hidden channels
         self.cv1 = Conv(c1, 2 * self.c, 1, 1)
-        self.cv2 = Conv((2 + n) * self.c, c2, 1)  # optional act=FReLU(c2)
-        self.attention = SpatialAttention(kernel_size=3)  # or SpatialAttention()
+        self.cv2 = CIS((2 + n) * self.c, c2, 1)  # optional act=FReLU(c2)
         self.m = nn.ModuleList(Bottleneck(self.c, self.c, shortcut, g, k=((3, 3), (3, 3)), e=1.0) for _ in range(n))
-
-    def forward(self, x):
-        """Forward pass through C2f layer."""
-        y = list(self.cv1(x).chunk(2, 1))
-        y.extend(m(y[-1]) for m in self.m)
-        return self.cv2(self.attention(torch.cat(y, 1)))
-
-    def forward_split(self, x):
-        """Forward pass using split() instead of chunk()."""
-        y = list(self.cv1(x).split((self.c, self.c), 1))
-        y.extend(m(y[-1]) for m in self.m)
-        return self.cv2(torch.cat(y, 1))
-
-
-class C2el(nn.Module):
-    """Faster Implementation of CSP Bottleneck with 2 convolutions."""
-
-    def __init__(self, c1, c2, n=1, g=1, e=0.5):  # ch_in, ch_out, number, shortcut, groups, expansion
-        super().__init__()
-        self.c = int(c2 * e)  # hidden channels
-        self.cv1 = Conv(c1, 2 * self.c, 1, 1)
-        self.cv2 = Conv((2 + n) * self.c, c2, 1)  # optional act=FReLU(c2)
-        # self.attention = SpatialAttention(kernel_size=3)  # or SpatialAttention()
-        self.m = nn.ModuleList(Conv(self.c, self.c, k=3, s=1, g=g) for _ in range(n))
-
-    def forward(self, x):
-        """Forward pass through C2f layer."""
-        y = list(self.cv1(x).chunk(2, 1))
-        y.extend(m(y[-1]) for m in self.m)
-        return self.cv2(torch.cat(y, 1))
-
-    def forward_split(self, x):
-        """Forward pass using split() instead of chunk()."""
-        y = list(self.cv1(x).split((self.c, self.c), 1))
-        y.extend(m(y[-1]) for m in self.m)
-        return self.cv2(torch.cat(y, 1))
-
-
-class C2ft(nn.Module):
-    """Faster Implementation of CSP Bottleneck with 2 convolutions."""
-
-    def __init__(self, c1, c2, n=1, shortcut=False, g=1, e=0.5):  # ch_in, ch_out, number, shortcut, groups, expansion
-        super().__init__()
-        self.c = int(c2 * e)  # hidden channels
-        self.cv1 = Conv(c1, 2 * self.c, 1, 1)
-        self.cv2 = Conv((2 + n) * self.c, c2, 1)  # optional act=FReLU(c2)
-        # self.attention = SpatialAttention(kernel_size=3)  # or SpatialAttention()
-        self.m = nn.ModuleList(
-            BottleneckT(self.c, self.c, shortcut, g, k=((3, 3), (3, 3), (3, 3)), e=1.0) for _ in range(n))
 
     def forward(self, x):
         """Forward pass through C2f layer."""

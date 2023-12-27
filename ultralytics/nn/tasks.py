@@ -11,8 +11,8 @@ from ultralytics.nn.modules import (AIFI, C1, C2, C3, C3TR, SPP, SPPF, Bottlenec
                                     Classify, Concat, Conv, Conv2, ConvTranspose, Detect, DWConv, DWConvTranspose2d,
                                     Focus, GhostBottleneck, GhostConv, HGBlock, HGStem, Pose, RepC3, RepConv,
                                     RTDETRDecoder, Segment)
-from ultralytics.nn.modules.block import MS2, MS2b, C2RepX, SplitMP,  MS2d, MS2e, C2d, C2sc, C2RepXc, \
-     C2x, C2fSA, C2el, C2ft, TranConcat, TranQKVConcat, SPPFDWC
+from ultralytics.nn.modules.block import MS2, MS2b, C2RepX, C2RepXc, \
+     C2x,  TranConcat, TranQKVConcat
 from ultralytics.nn.modules.conv import RepXConv
 from ultralytics.utils import DEFAULT_CFG_DICT, DEFAULT_CFG_KEYS, LOGGER, colorstr, emojis, yaml_load
 from ultralytics.utils.checks import check_requirements, check_suffix, check_yaml
@@ -660,10 +660,9 @@ def parse_model(d, ch, verbose=True):  # model_dict, input_channels(3)
                     args[j] = locals()[a] if a in locals() else ast.literal_eval(a)
 
         n = n_ = max(round(n * depth), 1) if n > 1 else n  # depth gain
-        if m in (Classify, Conv, ConvTranspose, GhostConv, Bottleneck, GhostBottleneck, SPP, SPPF, SPPFDWC,
-                 DWConv,Focus, BottleneckCSP, C1, C2, C2f, C3, C3TR, C3Ghost, nn.ConvTranspose2d, DWConvTranspose2d, C3x, RepC3,
-                 MS2, MS2b, C2RepX, SplitMP, MS2d, MS2e, C2d, C2sc, C2RepXc, C2ft,
-                 C2x, RepConv, C2fSA, C2el):
+        if m in (Classify, Conv, ConvTranspose, GhostConv, Bottleneck, GhostBottleneck, SPP, SPPF, DWConv,Focus,
+                 BottleneckCSP, C1, C2, C2f, C3, C3TR, C3Ghost, nn.ConvTranspose2d, DWConvTranspose2d, C3x, RepC3,
+                 MS2, MS2b, C2RepX, C2RepXc, C2x, RepConv,):
 
             c1, c2 = ch[f], args[0]
             if c2 != nc:  # if c2 not equal to number of classes (i.e. for Classify() output)
@@ -671,7 +670,7 @@ def parse_model(d, ch, verbose=True):  # model_dict, input_channels(3)
 
             args = [c1, c2, *args[1:]]
             if m in (BottleneckCSP, C1, C2, C2f, C3, C3TR, C3Ghost, C3x, RepC3, MS2, MS2b, C2RepX,
-                     MS2d, MS2e, C2d, C2sc, C2RepXc, C2x, C2fSA, C2el, C2ft):
+                    C2RepXc, C2x):
                 args.insert(2, n)  # number of repeats
                 n = 1
 
