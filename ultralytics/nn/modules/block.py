@@ -544,7 +544,7 @@ class TranQKVConcat(nn.Module):
         # ))
 
         return self.linear(
-            self.innorm_1(self.k(x) * self.q(x)) * self.v(x)
+            self.innorm(self.k(x) * self.q(x)) * self.v(x)
         )
 
 
