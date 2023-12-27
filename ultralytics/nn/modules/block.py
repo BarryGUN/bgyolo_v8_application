@@ -532,7 +532,9 @@ class TranQKVConcat(nn.Module):
         self.k = nn.Sequential(*(DWConv(dim, dim, k=3, s=1) for _ in range(2)))
         self.v = nn.Identity()
         self.linear = Conv(dim, dim, k=1, s=1)
+        self.gn = nn.GroupNorm(num_groups=dim // 16, num_channels=dim)
         self.innorm = nn.InstanceNorm2d(dim)
+        self.bn = nn.BatchNorm2d(dim)
         # self.act = nn.SiLU()
 
     def forward(self, x):
@@ -543,8 +545,17 @@ class TranQKVConcat(nn.Module):
         #     self.innorm_1(self.k(x) * self.q(x)) * self.v(x)
         # ))
 
+        # return self.linear(
+        #     self.innorm(self.k(x) * self.q(x)) * self.v(x)
+        # )
+
+        # return self.linear(
+        #     self.bn(self.innorm(self.k(x) * self.q(x))) * self.v(x)
+        # )
+
+
         return self.linear(
-            self.innorm(self.k(x) * self.q(x)) * self.v(x)
+            self.gn(self.k(x) * self.q(x)) * self.v(x)
         )
 
 
