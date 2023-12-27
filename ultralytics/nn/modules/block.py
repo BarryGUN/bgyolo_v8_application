@@ -656,30 +656,25 @@ class TranConcat(nn.Module):
 
 
 class TranQKVConcat(nn.Module):
-    def __init__(self, dim, dimension=1, eps=1e-7):
+    def __init__(self, dim, dimension=1):
         super(TranQKVConcat, self).__init__()
         self.d = dimension
         self.k = DWConv(dim, dim, k=3, s=1)
         self.q = DWConv(dim, dim, k=3, s=1)
         self.v = nn.Identity()
         self.linear = Conv(dim, dim, k=1, s=1)
-        # self.bconv = DWConv(dim, dim, k=3, s=1)
-        self.ln_1 = nn.LayerNorm(dim, eps=eps)
-        self.ln_2 = nn.LayerNorm(dim, eps=eps)
-        # self.bn = nn.BatchNorm2d(dim)
+        self.innorm_1 = nn.InstanceNorm2d(dim)
+        self.innorm_2 = nn.InstanceNorm2d(dim)
         # self.act = nn.SiLU()
-        self.eps = eps
-
-    def __laynorm__(self, laynorm, x):
-        x = x.permute(0, 2, 3, 1)  # (N, C, H, W) -> (N, H, W, C)
-        x = laynorm(x)
-        return x.permute(0, 3, 1, 2)  # (N, H, W, C) -> (N, C, H, W)
 
     def forward(self, x):
         x = torch.cat(x, self.d)
-        v = self.v(x)
-        x = self.__laynorm__(self.ln_1, self.k(x) * self.q(x))
-        x = self.__laynorm__(self.ln_2, x * v)
+        # qkv = (self.innorm(self.k(x) * self.q(x)) * self.v(x)).permute(0, 2, 3, 1)  # (N, C, H, W) -> (N, H, W, C)
+        # qkv = self.ln_1(qkv).permute(0, 3, 1, 2)
+        return self.linear(self.innorm_2(
+            self.innorm_1(self.k(x) * self.q(x)) * self.v(x)
+        ))
+
 
         # return x + self.linear(self.bn(
         #     (self.q(x) + self.eps) * (self.k(x) + self.eps)
@@ -689,7 +684,6 @@ class TranQKVConcat(nn.Module):
         # ) * (self.v(x) + self.eps))
 
 
-        return x
         # return self.linear(self.act(self.bn(
         #     (self.q(x) + self.eps) * (self.k(x) + self.eps)
         # )) * (self.v(x) + self.eps))
