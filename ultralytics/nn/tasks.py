@@ -13,7 +13,7 @@ from ultralytics.nn.modules import (AIFI, C1, C2, C3, C3TR, SPP, SPPF, Bottlenec
                                     RTDETRDecoder, Segment)
 from ultralytics.nn.modules.block import MS2, MS2b, C2RepX, C2RepXc, \
     C2x, TranConcat, TranQKVConcat, C2fIS
-from ultralytics.nn.modules.conv import RepXConv, CIS
+from ultralytics.nn.modules.conv import RepXConv, CIS, UpSampleGN
 from ultralytics.utils import DEFAULT_CFG_DICT, DEFAULT_CFG_KEYS, LOGGER, colorstr, emojis, yaml_load
 from ultralytics.utils.checks import check_requirements, check_suffix, check_yaml
 from ultralytics.utils.loss import v8ClassificationLoss, v8DetectionLoss, v8PoseLoss, v8SegmentationLoss
@@ -665,6 +665,7 @@ def parse_model(d, ch, verbose=True):  # model_dict, input_channels(3)
                  MS2, MS2b, C2RepX, C2RepXc, C2x, RepConv, C2fIS):
 
             c1, c2 = ch[f], args[0]
+
             if c2 != nc:  # if c2 not equal to number of classes (i.e. for Classify() output)
                 c2 = make_divisible(min(c2, max_channels) * width, 8)
 
@@ -675,6 +676,7 @@ def parse_model(d, ch, verbose=True):  # model_dict, input_channels(3)
                 n = 1
 
 
+
         elif m is AIFI:
             args = [ch[f], *args]
         elif m in (HGStem, HGBlock):
@@ -683,6 +685,8 @@ def parse_model(d, ch, verbose=True):  # model_dict, input_channels(3)
             if m is HGBlock:
                 args.insert(4, n)  # number of repeats
                 n = 1
+        elif m is UpSampleGN:
+            args = [ch[f], *args]
 
         elif m is nn.BatchNorm2d:
             args = [ch[f]]
