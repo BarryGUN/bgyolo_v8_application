@@ -540,9 +540,13 @@ class TranQKVConcat(nn.Module):
         x = torch.cat(x, self.d)
         # qkv = (self.innorm(self.k(x) * self.q(x)) * self.v(x)).permute(0, 2, 3, 1)  # (N, C, H, W) -> (N, H, W, C)
         # qkv = self.ln_1(qkv).permute(0, 3, 1, 2)
-        return self.linear(self.innorm_2(
+        # return self.linear(self.innorm_2(
+        #     self.innorm_1(self.k(x) * self.q(x)) * self.v(x)
+        # ))
+
+        return self.linear(
             self.innorm_1(self.k(x) * self.q(x)) * self.v(x)
-        ))
+        )
 
 
         # return x + self.linear(self.bn(
