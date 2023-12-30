@@ -525,17 +525,20 @@ class TranConcat(nn.Module):
 
 
 class TranQKVConcat(nn.Module):
-    def __init__(self, dim, dimension=1):
+    def __init__(self, dim, dimension=1, eps=1e-5):
         super(TranQKVConcat, self).__init__()
         self.d = dimension
         self.q = DWConv(dim, dim, k=3, s=1)
         self.k = nn.Sequential(*(DWConv(dim, dim, k=3, s=1) for _ in range(2)))
         self.v = nn.Identity()
         self.linear = Conv(dim, dim, k=1, s=1)
+        # self.gn = nn.GroupNorm(num_groups=dim // 32, num_channels=dim)
         self.gn = nn.GroupNorm(num_groups=dim // 16, num_channels=dim)
+        # self.gn = nn.GroupNorm(num_groups=dim // 8, num_channels=dim)
+        # self.gn = nn.GroupNorm(num_groups=dim // 2, num_channels=dim)
         # self.innorm = nn.InstanceNorm2d(dim)
-        self.bn = nn.BatchNorm2d(dim)
-        # self.act = nn.SiLU()
+        # self.bn = nn.BatchNorm2d(dim)
+        self.eps = eps
 
     def forward(self, x):
         x = torch.cat(x, self.d)
@@ -554,9 +557,16 @@ class TranQKVConcat(nn.Module):
         # )
 
 
+        # return self.linear(
+        #     self.gn(self.k(x) * self.q(x)) * self.v(x)
+        # )
+
         return self.linear(
             self.gn(self.k(x) * self.q(x)) * self.v(x)
         )
+        # return self.linear(
+        #     self.gn((self.k(x) + self.eps) * (self.q(x) + self.eps)) * (self.v(x) + self.eps)
+        # )
 
 
         # return x + self.linear(self.bn(
