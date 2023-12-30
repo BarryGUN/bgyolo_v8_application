@@ -544,34 +544,23 @@ class TranQKVConcat(nn.Module):
         x = torch.cat(x, self.d)
         # qkv = (self.innorm(self.k(x) * self.q(x)) * self.v(x)).permute(0, 2, 3, 1)  # (N, C, H, W) -> (N, H, W, C)
         # qkv = self.ln_1(qkv).permute(0, 3, 1, 2)
-        # return self.linear(self.innorm_2(
-        #     self.innorm_1(self.k(x) * self.q(x)) * self.v(x)
-        # ))
 
         # return self.linear(
         #     self.innorm(self.k(x) * self.q(x)) * self.v(x)
         # )
 
         # return self.linear(
-        #     self.bn(self.innorm(self.k(x) * self.q(x))) * self.v(x)
-        # )
-
-
-        # return self.linear(
         #     self.gn(self.k(x) * self.q(x)) * self.v(x)
         # )
-
         return self.linear(
-            self.gn(self.k(x) * self.q(x)) * self.v(x)
+            self.gn((self.k(x) + self.eps) * (self.q(x) + self.eps)) * (self.v(x) + self.eps)
         )
-        # return self.linear(
-        #     self.gn((self.k(x) + self.eps) * (self.q(x) + self.eps)) * (self.v(x) + self.eps)
-        # )
 
 
         # return x + self.linear(self.bn(
         #     (self.q(x) + self.eps) * (self.k(x) + self.eps)
         # ) * (self.v(x) + self.eps))
+
         # y = self.linear(self.bn(
         #     (self.q(x) + self.eps) * (self.k(x) + self.eps)
         # ) * (self.v(x) + self.eps))
@@ -580,10 +569,7 @@ class TranQKVConcat(nn.Module):
         # return self.linear(self.act(self.bn(
         #     (self.q(x) + self.eps) * (self.k(x) + self.eps)
         # )) * (self.v(x) + self.eps))
-        # return self.linear(self.bn(
-        #     (self.q(x) * self.k(x) + self.eps)
-        # ) * self.v(x) + self.eps)
-        # return self.linear(torch.softmax(q * k / math.sqrt(x.shape[1]), dim=1) * x)
+
 
 
 class C2x(nn.Module):
