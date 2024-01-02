@@ -532,9 +532,9 @@ class TranQKVConcat(nn.Module):
         self.k = nn.Sequential(*(DWConv(dim, dim, k=3, s=1) for _ in range(2)))
         self.v = nn.Identity()
         self.linear = Conv(dim, dim, k=1, s=1)
-        self.gn = nn.GroupNorm(num_groups=dim // 32, num_channels=dim)
-        # self.gn = nn.GroupNorm(num_groups=dim // 16, num_channels=dim)
-        # self.gn = nn.GroupNorm(num_groups=dim // 8, num_channels=dim)
+        # self.gn = nn.GroupNorm(num_groups=dim // 32, num_channels=dim)    # ×
+        # self.gn = nn.GroupNorm(num_groups=dim // 16, num_channels=dim)    # √
+        self.gn = nn.GroupNorm(num_groups=dim // 8, num_channels=dim)
         # self.gn = nn.GroupNorm(num_groups=dim // 2, num_channels=dim)
         # self.innorm = nn.InstanceNorm2d(dim)
         # self.bn = nn.BatchNorm2d(dim)
