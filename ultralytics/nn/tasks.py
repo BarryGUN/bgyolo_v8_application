@@ -12,7 +12,7 @@ from ultralytics.nn.modules import (AIFI, C1, C2, C3, C3TR, SPP, SPPF, Bottlenec
                                     Focus, GhostBottleneck, GhostConv, HGBlock, HGStem, Pose, RepC3, RepConv,
                                     RTDETRDecoder, Segment)
 from ultralytics.nn.modules.block import MS2, MS2b, C2RepX, C2RepXc, \
-    C2x, TranConcat, TranQKVConcat, C2fIS
+    C2x, TranConcat, TranQKVConcat, C2fIS, TranCSPSPPF
 from ultralytics.nn.modules.conv import RepXConv, CIS, UpSampleGN
 from ultralytics.utils import DEFAULT_CFG_DICT, DEFAULT_CFG_KEYS, LOGGER, colorstr, emojis, yaml_load
 from ultralytics.utils.checks import check_requirements, check_suffix, check_yaml
@@ -662,7 +662,7 @@ def parse_model(d, ch, verbose=True):  # model_dict, input_channels(3)
         n = n_ = max(round(n * depth), 1) if n > 1 else n  # depth gain
         if m in (Classify, Conv, CIS, ConvTranspose, GhostConv, Bottleneck, GhostBottleneck, SPP, SPPF, DWConv,Focus,
                  BottleneckCSP, C1, C2, C2f, C3, C3TR, C3Ghost, nn.ConvTranspose2d, DWConvTranspose2d, C3x, RepC3,
-                 MS2, MS2b, C2RepX, C2RepXc, C2x, RepConv, C2fIS):
+                 MS2, MS2b, C2RepX, C2RepXc, C2x, RepConv, C2fIS, TranCSPSPPF):
 
             c1, c2 = ch[f], args[0]
 
