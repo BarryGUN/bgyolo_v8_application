@@ -1,11 +1,3 @@
-"""
-YOLO 格式的数据集转化为 COCO 格式的数据集
---root_dir 输入根路径
---save_path 保存文件的名字(没有random_split时使用)
---random_split 有则会随机划分数据集，然后再分别保存为3个文件。
---split_by_file 按照 ./train.txt ./val.txt ./test.txt 来对数据集进行划分。
-"""
-
 import os
 from pathlib import Path
 
@@ -28,7 +20,7 @@ arg = parser.parse_args()
 
 
 def train_test_val_split_random(img_paths, ratio_train=0.8, ratio_test=0.1, ratio_val=0.1):
-    # 这里可以修改数据集划分的比例。
+    # split ratio
     assert int(ratio_train + ratio_test + ratio_val) == 1
     train_img, middle_img = train_test_split(img_paths, test_size=1 - ratio_train, random_state=233)
     ratio = ratio_val / (1 - ratio_train)
@@ -38,7 +30,7 @@ def train_test_val_split_random(img_paths, ratio_train=0.8, ratio_test=0.1, rati
 
 
 def train_test_val_split_by_files(img_paths, root_dir):
-    # 根据文件 train.txt, val.txt, test.txt（里面写的都是对应集合的图片名字） 来定义训练集、验证集和测试集
+    #  train.txt, val.txt, test.txt
     phases = ['train', 'val', 'test']
     img_split = []
     for p in phases:
@@ -66,12 +58,12 @@ def yolo2coco(arg):
     indexes = os.listdir(originImagesDir)
 
     if arg.random_split or arg.split_by_file:
-        # 用于保存所有数据的图片信息和标注信息
+        # save image and labels
         train_dataset = {'categories': [], 'annotations': [], 'images': []}
         val_dataset = {'categories': [], 'annotations': [], 'images': []}
         test_dataset = {'categories': [], 'annotations': [], 'images': []}
 
-        # 建立类别标签和数字id的对应关系, 类别id从0开始。
+        # class correspond with id
         for i, cls in enumerate(classes, 0):
             train_dataset['categories'].append({'id': i, 'name': cls, 'supercategory': 'mark'})
             val_dataset['categories'].append({'id': i, 'name': cls, 'supercategory': 'mark'})
@@ -88,31 +80,31 @@ def yolo2coco(arg):
         for i, cls in enumerate(classes, 0):
             dataset['categories'].append({'id': i, 'name': cls, 'supercategory': 'mark'})
 
-    # 标注的id
+    # label id
     ann_id_cnt = 0
     for k, index in enumerate(tqdm(indexes)):
-        # 支持 png jpg 格式的图片。
+        # support png and jpg
         txtFile = index.replace('images', 'txt').replace('.jpg', '.txt').replace('.png', '.txt')
         image_id = Path(index).stem
-        # 读取图像的宽和高
+        # read img width and high
         im = cv2.imread(os.path.join(root_path, 'images/') + index)
         height, width, _ = im.shape
         if arg.random_split or arg.split_by_file:
-            # 切换dataset的引用对象，从而划分数据集
+            # Switch the reference object of the dataset to partition the dataset.
             if index in train_img:
                 dataset = train_dataset
             elif index in val_img:
                 dataset = val_dataset
             elif index in test_img:
                 dataset = test_dataset
-        # 添加图像的信息
+        # add image detail
         dataset['images'].append({'file_name': index,
                                   # 'id': k,
                                   'id': image_id,
                                   'width': width,
                                   'height': height})
         if not os.path.exists(os.path.join(originLabelsDir, txtFile)):
-            # 如没标签，跳过，只保留图片信息。
+            # no label, ignore it, only save image detail
             continue
         with open(os.path.join(originLabelsDir, txtFile), 'r') as fr:
             labelList = fr.readlines()
@@ -129,7 +121,7 @@ def yolo2coco(arg):
                 y1 = (y - h / 2) * H
                 x2 = (x + w / 2) * W
                 y2 = (y + h / 2) * H
-                # 标签序号从0开始计算, coco2017数据集标号混乱，不管它了。
+                # "The label index is counted starting from 0."
                 cls_id = int(label[0])
                 width = max(0, x2 - x1)
                 height = max(0, y2 - y1)
@@ -142,12 +134,12 @@ def yolo2coco(arg):
                     # 'image_id': index,
                     'image_id': image_id,
                     'iscrowd': 0,
-                    # mask, 矩形是从左上角点按顺时针的四个顶点
+                    # mask, # The rectangle is defined by its four vertices in clockwise order, starting from the top-left corner.
                     'segmentation': [[x1, y1, x2, y1, x2, y2, x1, y2]]
                 })
                 ann_id_cnt += 1
 
-    # 保存结果
+    # save
     folder = os.path.join(root_path, 'annotations')
     if not os.path.exists(folder):
         os.makedirs(folder)

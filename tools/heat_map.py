@@ -190,7 +190,7 @@ class yolov8_heatmap:
 
 def get_params():
     params = {
-        'weight': 'yolov8n-bdd100k.pt',
+        'weight': 'yolov8n.pt',
         'cfg': 'ultralytics/cfg/models/v8/bdd100k/yolov8.yaml',
         'device': 'cuda:0',
         'method': 'XGradCAM',  # GradCAMPlusPlus, GradCAM, XGradCAM
