@@ -106,9 +106,9 @@ For detailed parameters, refer to tools/nfo_visDrone.py
 
 | Model        | size | mAP<sup>test<br>50 | speed<br><sup>RTX3060 TensorRT<br>(ms) | param<br><sup>(M) | FLOPs<br><sup>(G) |
 |--------------|------|--------------------|----------------------------------------|-------------------|-------------------|
-| [YOLOVISn]() | 640  | 26.3               | 4.74                                   | 3.5               | 9.7               |
-| [YOLOVISs]() | 640  | 30.1               | 5.38                                   | 13.0              | 34.6              |
-| [YOLOVISm]() | 640  | 33.7               | 6.58                                   | 29.2              | 90.7              |
+| [YOLOVISn](https://media.githubusercontent.com/media/BarryGUN/assets/master/yolov8n-vis.pt?download=true) | 640  | 26.3               | 4.74                                   | 3.5               | 9.7               |
+| [YOLOVISs](https://media.githubusercontent.com/media/BarryGUN/assets/master/yolov8s-vis.pt?download=true) | 640  | 30.1               | 5.38                                   | 13.0              | 34.6              |
+| [YOLOVISm](https://media.githubusercontent.com/media/BarryGUN/assets/master/yolov8m-vis.pt?download=true) | 640  | 33.7               | 6.58                                   | 29.2              | 90.7              |
 
 
 
