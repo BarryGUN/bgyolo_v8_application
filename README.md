@@ -1,6 +1,7 @@
 ## <div align="center">YOLOv8-vis(YOLOVIS) T_OO_T</div>
 <br>
 
+![image](pic.png)
 
 YOLOVIS is an unmanned aerial vehicle (UAV) object detection model based on the YOLOv8 backbone and VIS head, trained on the VisDrone dataset.
 
